@@ -23,6 +23,26 @@ The system is designed to provide educational medical information in a clean and
 
 ---
 
+# Demo
+
+## Light Mode — Home Screen
+
+![Light Mode Home](assets/screenshots/screenshot_1_light_home.png)
+
+## Dark Mode — Home Screen
+
+![Dark Mode Home](assets/screenshots/screenshot_2_dark_home.png)
+
+## Chat in Action — Typing Animation
+
+![Typing Animation](assets/screenshots/screenshot_3_Typing_animation.png)
+
+## RAG Response — Query Response
+
+![Query Response](assets/screenshots/screenshot4_Query_Response.png)
+
+---
+
 # Features
 
 * Medical Question Answering
@@ -132,6 +152,12 @@ GGUF models are optimized for:
 
 ```plaintext
 Medical-RAG-Chatbot/
+│
+├── assets/
+│   └── screenshots/
+│       ├── screenshot_light_home.png
+│       ├── screenshot_dark_home.png
+│       └── screenshot_endocrine_response.png
 │
 ├── static/
 │   ├── style.css
