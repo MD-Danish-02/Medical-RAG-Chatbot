@@ -7,3 +7,5 @@ sentence-transformers
 ctransformers
 pypdf
 python-dotenv
+
+-e.

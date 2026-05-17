@@ -23,7 +23,7 @@ list_of_files = [
     "store_index.py",
 
     "static/style.css",
-    "static/.gitkeep",
+    #"static/.gitkeep",
 
     "templates/chat.html"
     #"test.py"
