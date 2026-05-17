@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medical Encyclopedia RAG Chatbot</title>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@300;400;700&family=Source+Sans+3:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+    <div class="app-wrapper">
+
+        <!-- ══ ICON RAIL (always visible) ══ -->
+        <div class="icon-rail">
+            <!-- Sidebar toggle: top-left, always visible -->
+            <button class="rail-btn rail-sidebar-toggle" id="rail-sidebar-toggle" data-tip="Toggle Sidebar" onclick="toggleSidebar()">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="1" y="1" width="16" height="16" rx="3" stroke="currentColor" stroke-width="1.5"/>
+        <line x1="6" y1="1.5" x2="6" y2="16.5" stroke="currentColor" stroke-width="1.5"/>
+        <line x1="9" y1="6" x2="14" y2="6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+        <line x1="9" y1="9" x2="14" y2="9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+        <line x1="9" y1="12" x2="14" y2="12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+      </svg>
+    </button>
+            <div class="rail-divider"></div>
+            <button class="rail-btn" data-tip="New Chat" onclick="newChat()">✏️</button>
+            <div class="rail-divider"></div>
+            <button class="rail-btn" data-tip="Bookmarks" onclick="openModal('bookmarks-modal')">🔖</button>
+            <div class="rail-spacer"></div>
+            <div class="rail-divider"></div>
+            <button class="rail-btn" id="theme-rail-btn" data-tip="Dark / Light Mode" onclick="toggleTheme()">🌙</button>
+        </div>
+
+        <!-- ══ SIDEBAR PANEL ══ -->
+        <div class="sidebar-panel closed" id="sidebar-panel">
+            <!-- Close button on right edge of sidebar -->
+            <button class="sidebar-toggle-btn" onclick="toggleSidebar()" title="Close sidebar">‹</button>
+
+            <div class="sidebar-top">
+                <h3>📚 History</h3>
+                <button class="sidebar-close-btn" onclick="toggleSidebar()" title="Close sidebar">✕</button>
+            </div>
+            <button class="new-chat-btn" onclick="newChat()">＋ New Chat</button>
+            <div class="history-section-label">Recent</div>
+            <div class="chat-history-list" id="history-list">
+                <div class="empty-state">No chats yet</div>
+            </div>
+            <div class="sidebar-foot">Medical Encyclopedia RAG v2.0</div>
+        </div>
+
+        <!-- ══ MAIN CHAT ══ -->
+        <div class="chat-container">
+
+            <div class="chat-header">
+                <div class="header-left">
+                    <div class="header-icon">🩺</div>
+                    <div class="header-title">
+                        <h1>Medical Encyclopedia</h1>
+                        <p>Powered by RAG · Gale Encyclopedia of Medicine</p>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <button class="hdr-btn" title="Export PDF" onclick="exportPDF()" style="font-size:15px;">📄</button>
+                    <button class="hdr-btn" title="Bookmarks" onclick="openModal('bookmarks-modal')">
+          🔖<span class="bk-badge" id="bk-badge">0</span>
+        </button>
+                    <button class="hdr-btn" id="theme-btn" title="Toggle Dark Mode" onclick="toggleTheme()">🌙</button>
+                </div>
+            </div>
+
+            <div class="symptom-bar">
+                <span class="symptom-chip active" id="chip-all" onclick="selectCategory(this, 'All medical topics')">🫀 All</span>
+                <span class="symptom-chip" onclick="selectCategory(this, 'Tell me about respiratory system conditions')">🫁 Respiratory</span>
+                <span class="symptom-chip" onclick="selectCategory(this, 'Tell me about cardiac conditions')">❤️ Cardiac</span>
+                <span class="symptom-chip" onclick="selectCategory(this, 'Tell me about digestive system conditions')">🫃 Digestive</span>
+                <span class="symptom-chip" onclick="selectCategory(this, 'Tell me about neurological conditions')">🧠 Neurological</span>
+                <span class="symptom-chip" onclick="selectCategory(this, 'Tell me about musculoskeletal conditions')">🦴 Musculoskeletal</span>
+                <span class="symptom-chip" onclick="selectCategory(this, 'Tell me about dermatology conditions')">💊 Dermatology</span>
+                <span class="symptom-chip" onclick="selectCategory(this, 'Tell me about endocrine system conditions')">🔬 Endocrine</span>
+                <span class="symptom-chip" onclick="selectCategory(this, 'Tell me about urological conditions')">💧 Urology</span>
+                <span class="symptom-chip" onclick="selectCategory(this, 'Tell me about ophthalmology conditions')">👁️ Ophthalmology</span>
+                <span class="symptom-chip" onclick="selectCategory(this, 'Tell me about diabetes and its management')">🩸 Diabetes</span>
+                <span class="symptom-chip" onclick="selectCategory(this, 'Tell me about hypertension and blood pressure')">💓 Hypertension</span>
+            </div>
+
+            <div class="chat-box" id="chat-box">
+                <div class="msg-row">
+                    <div class="bot-avatar">📖</div>
+                    <div class="msg-content">
+                        <div class="message bot">
+                            Welcome! 👋 I'm your <strong>Medical Encyclopedia Assistant</strong> — trained on the Gale Encyclopedia of Medicine.<br><br> Ask me about diseases, symptoms, treatments, anatomy, or any medical topic. Use the quick chips above
+                            to explore!
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="report-bar">
+                <button class="report-btn" onclick="openModal('report-modal')">⚑ Report an Issue</button>
+                <span class="char-count" id="char-count">0 / 500</span>
+            </div>
+
+            <div class="chat-input">
+                <input type="text" id="text" placeholder="Ask a medical question..." maxlength="500">
+                <button class="send-btn" id="send">➤</button>
+            </div>
+
+            <div class="footer">
+                <p class="disclaimer-heading">⚕ Medical Disclaimer</p>
+                <p class="disclaimer-text">
+                    This chatbot is powered by The Gale Encyclopedia of Medicine and provides general health information for educational purposes only. It does not constitute professional medical advice, diagnosis, or treatment. Always consult a qualified physician or healthcare
+                    provider. In a medical emergency, call 112 immediately.
+                </p>
+                <p class="copyright">© 2026 Muhammad Danish Alam &nbsp;·&nbsp; All rights reserved</p>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- REPORT MODAL -->
+    <div class="modal-overlay" id="report-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>⚑ Report an Issue</h2>
+                <button class="modal-close" onclick="closeModal('report-modal')">✕</button>
+            </div>
+            <label>Issue Type</label>
+            <select id="issue-type">
+      <option>Wrong / Inaccurate Answer</option>
+      <option>Incomplete Information</option>
+      <option>Bot Not Responding</option>
+      <option>Offensive Content</option>
+      <option>Other</option>
+    </select>
+            <label>Describe the Issue</label>
+            <textarea id="issue-desc" placeholder="What went wrong?"></textarea>
+            <label>Your Email (optional)</label>
+            <input type="text" id="issue-email" placeholder="you@example.com">
+            <div class="modal-actions">
+                <button class="modal-btn secondary" onclick="closeModal('report-modal')">Cancel</button>
+                <button class="modal-btn primary" onclick="submitReport()">Submit</button>
+                <button class="modal-btn primary" style="background:#00897b" onclick="reportViaEmail()">📧 Email</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- BOOKMARKS MODAL -->
+    <div class="modal-overlay" id="bookmarks-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>🔖 Saved Answers</h2>
+                <button class="modal-close" onclick="closeModal('bookmarks-modal')">✕</button>
+            </div>
+            <div class="bookmark-list" id="bookmark-list">
+                <div class="empty-state">No bookmarks yet.<br>Click 🔖 on any answer to save it.</div>
+            </div>
+            <div class="modal-actions">
+                <button class="modal-btn secondary" onclick="clearBookmarks()">Clear All</button>
+                <button class="modal-btn primary" onclick="closeModal('bookmarks-modal')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+
+</html>
