@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 
 from dotenv import load_dotenv
 
@@ -12,9 +12,15 @@ from langchain_classic.chains import RetrievalQA
 
 from langchain_community.llms import CTransformers
 
+from flask_login import LoginManager, login_user, login_required, logout_user, current_user
+
+from authlib.integrations.flask_client import OAuth
+
 from src.helper import download_hugging_face_embeddings
 
 from src.prompt import prompt_template
+
+from src.database import db, User, ChatHistory
 
 import os
 
@@ -25,6 +31,49 @@ load_dotenv()
 
 # Flask App
 app = Flask(__name__)
+
+app.secret_key = os.getenv("SECRET_KEY")
+
+
+# PostgreSQL Config
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("DATABASE_URL")
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+
+# Initialize Database
+db.init_app(app)
+
+
+# Login Manager
+login_manager = LoginManager()
+
+login_manager.init_app(app)
+
+login_manager.login_view = "login"
+
+
+@login_manager.user_loader
+def load_user(user_id):
+
+    return User.query.get(int(user_id))
+
+
+# OAuth Setup
+oauth = OAuth(app)
+
+google = oauth.register(
+    name='google',
+
+    client_id=os.getenv("GOOGLE_CLIENT_ID"),
+
+    client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
+
+    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+
+    client_kwargs={
+        'scope': 'openid email profile'
+    }
+)
 
 
 # Pinecone API Key
@@ -87,11 +136,64 @@ qa = RetrievalQA.from_chain_type(
 # Home Route
 @app.route("/")
 def index():
+
     return render_template("chat.html")
+
+
+# Google Login Route
+@app.route("/login")
+def login():
+
+    redirect_uri = url_for("auth_callback", _external=True)
+
+    return google.authorize_redirect(redirect_uri)
+
+
+# Google OAuth Callback
+@app.route("/login/callback")
+def auth_callback():
+
+    token = google.authorize_access_token()
+
+    user_info = token["userinfo"]
+
+    user = User.query.filter_by(email=user_info["email"]).first()
+
+    if not user:
+
+        user = User(
+
+            google_id=user_info["sub"],
+
+            name=user_info["name"],
+
+            email=user_info["email"],
+
+            profile_pic=user_info["picture"]
+        )
+
+        db.session.add(user)
+
+        db.session.commit()
+
+    login_user(user)
+
+    return redirect("/")
+
+
+# Logout Route
+@app.route("/logout")
+@login_required
+def logout():
+
+    logout_user()
+
+    return redirect("/")
 
 
 # Chat Route
 @app.route("/get", methods=["POST"])
+@login_required
 def chat():
 
     msg = request.form["msg"]
@@ -104,11 +206,113 @@ def chat():
 
     print("Response:", response)
 
+    # Save Chat History
+    chat_data = ChatHistory(
+
+        user_id=current_user.id,
+
+        question=msg,
+
+        answer=response
+    )
+
+    db.session.add(chat_data)
+
+    db.session.commit()
+
     return str(response)
+
+
+# Get Chat History
+@app.route("/history")
+@login_required
+def history():
+
+    chats = ChatHistory.query.filter_by(
+        user_id=current_user.id
+    ).all()
+
+    data = []
+
+    for chat in chats:
+
+        data.append({
+
+            "id": chat.id,
+
+            "question": chat.question,
+
+            "answer": chat.answer
+        })
+
+    return jsonify(data)
+
+
+# Delete Chat
+@app.route("/delete_chat/<int:chat_id>", methods=["DELETE"])
+@login_required
+def delete_chat(chat_id):
+
+    chat = ChatHistory.query.filter_by(
+        id=chat_id,
+        user_id=current_user.id
+    ).first()
+
+    if not chat:
+
+        return jsonify({"error": "Chat not found"}), 404
+
+    db.session.delete(chat)
+
+    db.session.commit()
+
+    return jsonify({"message": "Chat deleted successfully"})
+
+
+# Get Profile Info
+@app.route("/profile")
+@login_required
+def profile():
+
+    chat_count = ChatHistory.query.filter_by(
+        user_id=current_user.id
+    ).count()
+
+    return jsonify({
+        "name": current_user.name,
+        "email": current_user.email,
+        "profile_pic": current_user.profile_pic,
+        "chat_count": chat_count,
+        "joined": current_user.created_at.strftime("%B %d, %Y")
+    })
+
+
+# Delete Account
+@app.route("/delete_account", methods=["DELETE"])
+@login_required
+def delete_account():
+
+    user_id = current_user.id
+
+    logout_user()
+
+    ChatHistory.query.filter_by(user_id=user_id).delete()
+
+    User.query.filter_by(id=user_id).delete()
+
+    db.session.commit()
+
+    return jsonify({"message": "Account deleted successfully"})
 
 
 # Run Flask App
 if __name__ == "__main__":
+
+    with app.app_context():
+
+        db.create_all()
+
+        print("✅ Users & Chat History Tables Created!")
 
     app.run(
         host="0.0.0.0",
