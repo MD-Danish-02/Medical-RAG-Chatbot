@@ -38,3 +38,21 @@ class ChatHistory(db.Model):
     answer = db.Column(db.Text)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+# Issue Reports
+class IssueReport(db.Model):
+
+    __tablename__ = "issue_reports"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    user_id = db.Column(db.Integer, nullable=True)      # Guest bhi report kar sake
+
+    issue_type = db.Column(db.String(100))
+
+    description = db.Column(db.Text)
+
+    email = db.Column(db.String(200), nullable=True)    # Optional email
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)

@@ -172,9 +172,6 @@ body {
     border-right: none;
 }
 
-
-/* Close button on right edge of sidebar */
-
 .sidebar-toggle-btn {
     position: absolute;
     top: 50%;
@@ -401,6 +398,7 @@ body {
 .header-actions {
     display: flex;
     gap: 6px;
+    align-items: center;
 }
 
 .hdr-btn {
@@ -436,6 +434,31 @@ body {
     display: none;
     align-items: center;
     justify-content: center;
+}
+
+
+/* ══ LOGIN HEADER BUTTON ══ */
+
+#login-header-btn {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 0 14px;
+    height: 32px;
+    background: rgba(255, 255, 255, 0.92);
+    color: var(--primary);
+    font-size: 12px;
+    font-weight: 700;
+    border-radius: 20px;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: all 0.2s;
+}
+
+#login-header-btn:hover {
+    background: #ffffff;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
 }
 
 
@@ -1023,9 +1046,6 @@ body {
     padding-bottom: 4px;
 }
 
-
-/* Profile avatar image inside rail button */
-
 .profile-rail-avatar {
     width: 26px;
     height: 26px;
@@ -1039,9 +1059,6 @@ body {
 .profile-rail-btn:hover .profile-rail-avatar {
     border-color: var(--primary);
 }
-
-
-/* ── Dropdown panel — opens UPWARD ── */
 
 .profile-dropdown {
     position: absolute;
@@ -1061,9 +1078,6 @@ body {
 .profile-dropdown.open {
     display: block;
 }
-
-
-/* ── Header: avatar + name + email ── */
 
 .profile-dropdown-header {
     display: flex;
@@ -1119,17 +1133,11 @@ body {
     text-overflow: ellipsis;
 }
 
-
-/* ── Divider ── */
-
 .pd-divider {
     height: 1px;
     background: var(--border);
     margin: 12px 0;
 }
-
-
-/* ── Stats row ── */
 
 .pd-stat-row {
     display: flex;
@@ -1162,9 +1170,6 @@ body {
     font-size: 12.5px;
     flex-shrink: 0;
 }
-
-
-/* ── Action buttons ── */
 
 .pd-action-btn {
     width: 100%;
@@ -1201,4 +1206,20 @@ body {
 .pd-delete:hover {
     background: rgba(229, 57, 53, 0.08);
     border-color: #e53935;
+}
+
+
+/* ══ LOGIN MODAL — Google button hover ══ */
+
+#login-modal a:hover {
+    background: #f1f8f1 !important;
+    border-color: var(--primary) !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(42, 110, 53, 0.15);
+    transition: all 0.2s;
+}
+
+[data-theme="dark"] #login-modal a:hover {
+    background: var(--surface2) !important;
+    border-color: var(--primary) !important;
 }

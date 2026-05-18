@@ -94,7 +94,6 @@
 
         <!-- ══ SIDEBAR PANEL ══ -->
         <div class="sidebar-panel closed" id="sidebar-panel">
-            <!-- Close button on right edge of sidebar -->
             <button class="sidebar-toggle-btn" onclick="toggleSidebar()" title="Close sidebar">‹</button>
 
             <div class="sidebar-top">
@@ -126,6 +125,15 @@
                         🔖<span class="bk-badge" id="bk-badge">0</span>
                     </button>
                     <button class="hdr-btn" id="theme-btn" title="Toggle Dark Mode" onclick="toggleTheme()">🌙</button>
+
+                    <!-- ══ LOGIN BUTTON — sirf guest ko dikhega ══ -->
+                    <a href="/login" id="login-header-btn" style="display:none; align-items:center; justify-content:center;
+                              padding:0 14px; height:32px; background:rgba(255,255,255,0.92);
+                              color:var(--primary); font-size:12px; font-weight:700;
+                              border-radius:20px; text-decoration:none; white-space:nowrap;
+                              border:none; cursor:pointer;">
+                        Log in
+                    </a>
                 </div>
             </div>
 
@@ -180,6 +188,34 @@
 
     </div>
     <!-- ══ END APP WRAPPER ══ -->
+
+
+    <!-- ══ LOGIN MODAL — guest ka pehla message send karne pe dikhega ══ -->
+    <div class="modal-overlay" id="login-modal">
+        <div class="modal" style="max-width:380px; text-align:center;">
+            <div class="modal-header" style="justify-content:flex-end; margin-bottom:8px;">
+                <button class="modal-close" onclick="closeModal('login-modal')">✕</button>
+            </div>
+            <div style="font-size:32px; margin-bottom:12px;">🩺</div>
+            <h2 style="font-family:'Merriweather',serif; font-size:18px; color:var(--text); margin-bottom:8px;">
+                Sign in to Continue
+            </h2>
+            <p style="font-size:13px; color:var(--text-muted); margin-bottom:24px; line-height:1.6;">
+                Sign in to send messages and save your chat history.
+            </p>
+            <a href="/login" style="
+                display:flex; align-items:center; justify-content:center; gap:10px;
+                padding:12px 16px; background:#ffffff; color:#333;
+                border:1.5px solid var(--border); border-radius:10px;
+                font-size:14px; font-weight:600; text-decoration:none;
+                transition:all 0.2s; margin-bottom:10px;">
+                <img src="https://www.google.com/favicon.ico" width="18" height="18" alt="G"> Continue with Google
+            </a>
+            <p style="font-size:11px; color:var(--text-muted); margin-top:12px;">
+                🔒 Your data is safe and private.
+            </p>
+        </div>
+    </div>
 
 
     <!-- ══ DELETE ACCOUNT CONFIRM MODAL ══ -->
