@@ -20,7 +20,7 @@ from src.helper import download_hugging_face_embeddings
 
 from src.prompt import prompt_template
 
-from src.database import db, User, ChatHistory
+from src.database import db, User, ChatHistory, IssueReport
 
 import os
 
@@ -181,20 +181,22 @@ def auth_callback():
     return redirect("/")
 
 
-# Logout Route
+# Logout Route — guest logout crash na kare
 @app.route("/logout")
-@login_required
 def logout():
 
-    logout_user()
+    if current_user.is_authenticated:
+        logout_user()
 
     return redirect("/")
 
 
-# Chat Route
+# Chat Route — manually 401 return karte hain
 @app.route("/get", methods=["POST"])
-@login_required
 def chat():
+
+    if not current_user.is_authenticated:
+        return jsonify({"error": "login_required"}), 401
 
     msg = request.form["msg"]
 
@@ -223,10 +225,12 @@ def chat():
     return str(response)
 
 
-# Get Chat History
+# Get Chat History — guest ke liye empty array return
 @app.route("/history")
-@login_required
 def history():
+
+    if not current_user.is_authenticated:
+        return jsonify([])
 
     chats = ChatHistory.query.filter_by(
         user_id=current_user.id
@@ -305,6 +309,32 @@ def delete_account():
     return jsonify({"message": "Account deleted successfully"})
 
 
+# ✅ NAYA — Report an Issue Route
+@app.route("/report", methods=["POST"])
+def report():
+
+    data = request.get_json()
+
+    issue = IssueReport(
+
+        user_id=current_user.id if current_user.is_authenticated else None,
+
+        issue_type=data.get("type", ""),
+
+        description=data.get("description", ""),
+
+        email=data.get("email", "")
+    )
+
+    db.session.add(issue)
+
+    db.session.commit()
+
+    print(f"📩 Report saved: [{issue.issue_type}] by user_id={issue.user_id}")
+
+    return jsonify({"message": "Report received"}), 200
+
+
 # Run Flask App
 if __name__ == "__main__":
 
@@ -312,7 +342,7 @@ if __name__ == "__main__":
 
         db.create_all()
 
-        print("✅ Users & Chat History Tables Created!")
+        print("✅ Users, Chat History & Issue Reports Tables Created!")
 
     app.run(
         host="0.0.0.0",
