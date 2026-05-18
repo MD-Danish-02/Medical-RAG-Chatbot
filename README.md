@@ -1,6 +1,6 @@
 # Medical-RAG-Chatbot
 
-AI-powered Medical Encyclopedia Chatbot using **RAG (Retrieval-Augmented Generation)** architecture with **Llama 2**, **LangChain**, **Pinecone**, and **Flask** for intelligent medical question answering from PDF-based medical knowledge sources.
+AI-powered Medical Encyclopedia Chatbot using **RAG (Retrieval-Augmented Generation)** architecture with **Llama 2**, **LangChain**, **Pinecone**, **Flask**, and **PostgreSQL** for intelligent medical question answering from PDF-based medical knowledge sources — with full **Google OAuth authentication** and persistent chat history.
 
 ---
 
@@ -18,6 +18,9 @@ This project combines:
 * Medical PDF processing
 * Modern responsive frontend UI
 * Flask backend integration
+* Google OAuth 2.0 Authentication
+* PostgreSQL persistent storage
+* Guest mode with login-on-demand
 
 The system is designed to provide educational medical information in a clean and interactive interface.
 
@@ -41,56 +44,93 @@ The system is designed to provide educational medical information in a clean and
 
 ![Query Response](assets/screenshots/screenshot4_Query_Response.png)
 
+## Guest Mode — Login Modal on Message Send
+
+![Login Modal](assets/screenshots/screenshot_5_login_modal.png)
+
+## Logged In — Profile Dropdown
+
+![Profile Dropdown](assets/screenshots/screenshot_6_profile_dropdown.png)
+
 ---
 
 # Features
 
+## Core AI Features
 * Medical Question Answering
 * RAG-based Response Generation
 * Local Llama 2 Inference
 * Pinecone Vector Database
 * PDF Knowledge Base
-* Dark / Light Theme
-* Chat History Support
+* Related Topic Suggestions
+
+## Authentication & User Management
+* Google OAuth 2.0 Login
+* Guest Mode — browse freely without login
+* Login-on-demand — modal appears on first message
+* Persistent user profiles (name, email, avatar, joined date)
+* Secure logout
+* Account deletion with full data wipe
+
+## Chat & History
+* PostgreSQL-backed chat history
+* Per-user chat history isolation
+* Delete individual chats
+* New chat session support
+* Sidebar history navigation with jump-to-message
+
+## UI & Experience
+* Dark / Light Theme Toggle
 * Typing Animation
-* PDF Export
-* Medical Category Navigation
-* Issue Reporting Modal
-* Responsive UI Design
-* Educational Medical Disclaimer
-* Flask API Backend
-* Fully Offline LLM Inference
+* Medical Category Navigation chips
+* Bookmarks — save any bot response
+* PDF Export of chat
+* Report Issue Modal with Email support
+* Character counter on input
+* Toast notifications
+* Responsive layout with icon rail sidebar
+
+## Backend & Infrastructure
+* Flask REST API
+* PostgreSQL database (users + chat history)
+* Flask-Login session management
+* Authlib OAuth integration
+* SQLAlchemy ORM
 
 ---
 
 # Tech Stack
 
 ## Frontend
-
 * HTML5
 * CSS3
 * JavaScript
 * jQuery
 
 ## Backend
-
 * Flask
 * Python
+* Flask-Login
+* Authlib
+* SQLAlchemy
+
+## Database
+* PostgreSQL
 
 ## AI / ML
-
 * LangChain
 * Llama 2
 * CTransformers
 * Sentence Transformers
 
 ## Vector Database
-
 * Pinecone
 
 ## Embedding Model
-
 * sentence-transformers/all-MiniLM-L6-v2
+
+## Authentication
+* Google OAuth 2.0
 
 ---
 
@@ -99,7 +139,7 @@ The system is designed to provide educational medical information in a clean and
 ```text
 User Question
       ↓
-Flask Backend
+Flask Backend (Auth Check)
       ↓
 Pinecone Vector Search
       ↓
@@ -109,7 +149,33 @@ Context Sent to Llama 2
       ↓
 LLM Generates Final Answer
       ↓
+Response Saved to PostgreSQL
+      ↓
 Response Displayed in UI
+```
+
+---
+
+# Authentication Flow
+
+```text
+User visits /
+      ↓
+Guest Mode — can browse freely
+      ↓
+User sends a message
+      ↓
+Login Modal appears
+      ↓
+"Continue with Google" clicked
+      ↓
+Google OAuth 2.0 redirect
+      ↓
+Callback → user created/fetched from PostgreSQL
+      ↓
+Flask-Login session created
+      ↓
+Redirected back to chat
 ```
 
 ---
@@ -155,9 +221,12 @@ Medical-RAG-Chatbot/
 │
 ├── assets/
 │   └── screenshots/
-│       ├── screenshot_light_home.png
-│       ├── screenshot_dark_home.png
-│       └── screenshot_endocrine_response.png
+│       ├── screenshot_1_light_home.png
+│       ├── screenshot_2_dark_home.png
+│       ├── screenshot_3_Typing_animation.png
+│       ├── screenshot4_Query_Response.png
+│       ├── screenshot_5_login_modal.png
+│       └── screenshot_6_profile_dropdown.png
 │
 ├── static/
 │   ├── style.css
@@ -169,6 +238,7 @@ Medical-RAG-Chatbot/
 ├── src/
 │   ├── helper.py
 │   ├── prompt.py
+│   ├── database.py
 │   └── __init__.py
 │
 ├── model/
@@ -203,13 +273,9 @@ Medical PDFs are loaded using:
 PyPDFLoader
 ```
 
----
-
 ## Step 2 — Text Chunking
 
 Documents are divided into smaller chunks for efficient retrieval.
-
----
 
 ## Step 3 — Embedding Generation
 
@@ -219,23 +285,21 @@ Text embeddings are generated using:
 sentence-transformers/all-MiniLM-L6-v2
 ```
 
----
-
 ## Step 4 — Pinecone Indexing
 
 Embeddings are stored inside Pinecone vector database.
-
----
 
 ## Step 5 — Retrieval
 
 Relevant chunks are retrieved based on semantic similarity.
 
----
-
 ## Step 6 — Response Generation
 
 Llama 2 generates the final response using retrieved context.
+
+## Step 7 — Storage
+
+Response and question are saved to PostgreSQL under the authenticated user.
 
 ---
 
@@ -247,15 +311,11 @@ Llama 2 generates the final response using retrieved context.
 git clone https://github.com/yourusername/Medical-RAG-Chatbot.git
 ```
 
----
-
 ## Create Environment
 
 ```bash
 conda create -p venv python=3.10 -y
 ```
-
----
 
 ## Activate Environment
 
@@ -271,8 +331,6 @@ conda activate D:\conda_envs\mchatbot
 conda activate /d/conda_envs/mchatbot
 ```
 
----
-
 ## Install Requirements
 
 ```bash
@@ -283,37 +341,66 @@ pip install -r requirements.txt
 
 # Environment Variables
 
-Create `.env`
+Create `.env` file:
 
 ```env
-PINECONE_API_KEY=your_api_key
-PINECONE_API_ENV=your_environment
+PINECONE_API_KEY=your_pinecone_api_key
+PINECONE_API_ENV=your_pinecone_environment
+SECRET_KEY=your_flask_secret_key
+DATABASE_URL=postgresql://username:password@localhost/dbname
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
 ```
+
+---
+
+# Google OAuth Setup
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a new project
+3. Enable **Google+ API** / **Google Identity**
+4. Go to **Credentials** → Create **OAuth 2.0 Client ID**
+5. Add Authorized redirect URI:
+
+```text
+http://127.0.0.1:8080/login/callback
+```
+
+6. Copy **Client ID** and **Client Secret** to `.env`
+
+---
+
+# PostgreSQL Setup
+
+Create database:
+
+```sql
+CREATE DATABASE medical_chatbot;
+```
+
+Tables are auto-created on first run via SQLAlchemy.
 
 ---
 
 # Create Pinecone Index
 
-Create index in Pinecone dashboard.
-
-Example:
+Create index in Pinecone dashboard:
 
 ```text
-medical-chatbot
+Index name: medical-chatbot
+Dimensions: 384
+Metric: cosine
 ```
 
 ---
 
 # Store Vector Embeddings
 
-Run:
-
 ```bash
 python store_index.py
 ```
 
 This will:
-
 * Load PDF
 * Split chunks
 * Generate embeddings
@@ -335,10 +422,26 @@ http://127.0.0.1:8080
 
 ---
 
+# API Endpoints
+
+| Method | Endpoint                  | Auth Required | Description                  |
+| ------ | ------------------------- | ------------- | ---------------------------- |
+| GET    | /                         | No            | Main chat UI (guest allowed) |
+| GET    | /login                    | No            | Trigger Google OAuth         |
+| GET    | /login/callback           | No            | OAuth callback handler       |
+| GET    | /logout                   | No            | Logout user                  |
+| POST   | /get                      | Yes           | Send message, get RAG answer |
+| GET    | /history                  | No            | Get chat history (guest: []) |
+| DELETE | /delete_chat/<id>         | Yes           | Delete specific chat         |
+| GET    | /profile                  | Yes           | Get user profile info        |
+| DELETE | /delete_account           | Yes           | Delete account + all data    |
+
+---
+
 # UI Features
 
 ## Medical Categories
-
+* All
 * Respiratory
 * Cardiac
 * Digestive
@@ -348,25 +451,24 @@ http://127.0.0.1:8080
 * Endocrine
 * Urology
 * Ophthalmology
+* Diabetes
+* Hypertension
 
----
-
-## Additional Features
-
-* Sidebar Navigation
-* Theme Switching
-* Typing Animation
-* Report Issue Modal
-* Chat Export
-* Conversation History
+## User Features
+* Guest Mode — no login required to browse
+* Login Modal — appears on first message send
+* Profile Dropdown — avatar, name, email, stats
+* Chat History Sidebar — with delete support
+* Bookmarks — save any response locally
+* PDF Export — download full chat as HTML/PDF
+* Report Issue — sends pre-filled email report
+* Theme Toggle — dark / light mode
 
 ---
 
 # Prompt Engineering
 
-Custom prompt template used to reduce hallucinations and improve context-based responses.
-
-Example:
+Custom prompt template used to reduce hallucinations and improve context-based responses:
 
 ```text
 Only answer from the provided medical context.
@@ -380,9 +482,9 @@ Do not generate unsupported medical claims.
 
 * CPU inference can be slow
 * Occasional hallucinations
-* No authentication system
 * Source citations not fully implemented
 * Limited conversation memory
+* No streaming responses yet
 
 ---
 
@@ -390,13 +492,14 @@ Do not generate unsupported medical claims.
 
 * Streaming Responses
 * Source Citations
-* Better LLM Models
-* Authentication System
-* Database-backed Chat History
+* Better LLM Models (Mistral, Llama 3)
+* Database-backed Bookmarks
 * Voice Input
 * Multi-PDF Support
 * Docker Deployment
 * GPU Acceleration
+* Rate limiting per user
+* Admin dashboard
 
 ---
 
@@ -408,6 +511,8 @@ It is not intended to replace professional medical advice, diagnosis, or treatme
 
 Always consult a qualified healthcare professional for medical concerns.
 
+In a medical emergency, call **112** immediately.
+
 ---
 
 # Author
@@ -416,6 +521,7 @@ Always consult a qualified healthcare professional for medical concerns.
 
 AI & ML Enthusiast
 Medical RAG System Developer
+[LinkedIn](linkedin.com/in/md-danish-bb922324b) · [GitHub](https://github.com/MD-Danish-02)
 
 ---
 
@@ -427,9 +533,11 @@ This project is licensed under the MIT License.
 
 # Acknowledgements
 
-* Meta AI
+* Meta AI — Llama 2
 * LangChain
 * Pinecone
 * HuggingFace
 * Flask
+* Google OAuth
+* PostgreSQL
 * Gale Encyclopedia of Medicine
