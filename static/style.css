@@ -1223,3 +1223,17 @@ body {
     background: var(--surface2) !important;
     border-color: var(--primary) !important;
 }
+
+
+/* ══ SOURCE CITATION ══ */
+
+.source-citation {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 6px;
+    padding: 5px 10px;
+    border-top: 1px dashed var(--border);
+    font-style: italic;
+    background: var(--surface);
+    border-radius: 0 0 8px 8px;
+}
