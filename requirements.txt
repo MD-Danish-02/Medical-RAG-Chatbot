@@ -7,5 +7,6 @@ sentence-transformers
 ctransformers
 pypdf
 python-dotenv
+llama-cpp-python
 
 -e.
