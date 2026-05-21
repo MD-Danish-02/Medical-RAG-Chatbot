@@ -959,6 +959,9 @@ body {
     margin-top: 4px;
 }
 
+
+/* ✅ UPDATED: Bookmark item with hover tooltip */
+
 .bookmark-item {
     padding: 9px 11px;
     background: var(--surface2);
@@ -973,6 +976,26 @@ body {
 
 .bookmark-item:hover {
     border-color: var(--primary);
+}
+
+.bookmark-item:hover::after {
+    content: attr(title);
+    position: absolute;
+    left: 0;
+    top: 100%;
+    margin-top: 4px;
+    z-index: 999;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: var(--text);
+    width: 100%;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    white-space: pre-wrap;
+    word-break: break-word;
 }
 
 .bk-del {
@@ -1236,4 +1259,219 @@ body {
     font-style: italic;
     background: var(--surface);
     border-radius: 0 0 8px 8px;
+}
+
+
+/* ══ RESPONSIVE — MOBILE & TABLET ══ */
+
+@media (max-width: 768px) {
+    body {
+        align-items: flex-start;
+        overflow: hidden;
+    }
+    .app-wrapper {
+        width: 100vw;
+        height: 100dvh;
+        max-width: 100%;
+        border-radius: 0;
+        border: none;
+        box-shadow: none;
+    }
+    .icon-rail {
+        width: 44px;
+        min-width: 44px;
+        padding: 8px 0;
+        gap: 2px;
+    }
+    .rail-btn {
+        width: 32px;
+        height: 32px;
+        font-size: 16px;
+    }
+    .rail-btn::after {
+        display: none;
+    }
+    .sidebar-panel {
+        position: absolute;
+        left: 44px;
+        top: 0;
+        height: 100dvh;
+        z-index: 100;
+        width: 220px;
+        min-width: 220px;
+        box-shadow: 4px 0 20px rgba(0, 0, 0, 0.18);
+    }
+    .sidebar-panel.closed {
+        width: 0;
+        min-width: 0;
+    }
+    .chat-container {
+        width: 100%;
+    }
+    .chat-header {
+        padding: 0 10px;
+        height: 52px;
+    }
+    .header-icon {
+        width: 30px;
+        height: 30px;
+        font-size: 14px;
+    }
+    .header-title h1 {
+        font-size: 13px;
+    }
+    .header-title p {
+        font-size: 9px;
+    }
+    .hdr-btn {
+        width: 28px;
+        height: 28px;
+        font-size: 13px;
+    }
+    #login-header-btn {
+        font-size: 11px;
+        padding: 0 10px;
+        height: 28px;
+    }
+    .symptom-bar {
+        padding: 6px 8px;
+        gap: 5px;
+    }
+    .symptom-chip {
+        padding: 4px 10px;
+        font-size: 11px;
+    }
+    .chat-box {
+        padding: 10px 8px;
+        gap: 10px;
+    }
+    .bot-avatar {
+        width: 26px;
+        height: 26px;
+        font-size: 12px;
+        margin-top: 2px;
+    }
+    .msg-content {
+        max-width: 88%;
+    }
+    .message {
+        font-size: 13px;
+        padding: 9px 12px;
+        line-height: 1.6;
+    }
+    .source-citation {
+        font-size: 10px;
+        padding: 4px 8px;
+    }
+    .msg-actions {
+        gap: 3px;
+        margin-top: 3px;
+        opacity: 1;
+    }
+    .msg-action-btn {
+        padding: 2px 7px;
+        font-size: 10px;
+    }
+    .report-bar {
+        padding: 5px 8px;
+    }
+    .report-btn {
+        font-size: 10.5px;
+        padding: 4px 10px;
+    }
+    .char-count {
+        font-size: 10px;
+    }
+    .chat-input {
+        padding: 8px;
+        gap: 6px;
+    }
+    .chat-input input {
+        font-size: 13px;
+        padding: 9px 13px;
+    }
+    .send-btn {
+        width: 38px;
+        height: 38px;
+        font-size: 15px;
+    }
+    .footer {
+        padding: 10px 14px 8px;
+    }
+    .footer .disclaimer-heading {
+        font-size: 10px;
+    }
+    .footer .disclaimer-text {
+        font-size: 10px;
+        line-height: 1.5;
+    }
+    .footer .copyright {
+        font-size: 9px;
+        margin-top: 5px;
+    }
+    .modal {
+        width: 95%;
+        padding: 18px;
+        border-radius: 12px;
+    }
+    .modal-header h2 {
+        font-size: 14px;
+    }
+    .profile-dropdown {
+        width: 250px;
+        left: 4px;
+        padding: 14px;
+    }
+    .pd-name {
+        font-size: 13px;
+    }
+    .pd-email {
+        font-size: 10.5px;
+    }
+    .pd-stat {
+        font-size: 11.5px;
+    }
+    .pd-action-btn {
+        font-size: 12px;
+        padding: 8px 10px;
+    }
+    .bookmark-item:hover::after {
+        display: none;
+    }
+}
+
+@media (max-width: 380px) {
+    .header-title h1 {
+        font-size: 12px;
+    }
+    .header-actions {
+        gap: 4px;
+    }
+    .hdr-btn {
+        width: 26px;
+        height: 26px;
+        font-size: 12px;
+    }
+    .symptom-chip {
+        padding: 3px 9px;
+        font-size: 10.5px;
+    }
+    .message {
+        font-size: 12.5px;
+        padding: 8px 10px;
+    }
+    .chat-input input {
+        font-size: 12px;
+        padding: 8px 11px;
+    }
+    .send-btn {
+        width: 35px;
+        height: 35px;
+    }
+    .msg-content {
+        max-width: 92%;
+    }
+    .footer .disclaimer-text {
+        font-size: 9px;
+    }
 }

@@ -10,6 +10,8 @@ from authlib.integrations.flask_client import OAuth
 from src.helper import download_hugging_face_embeddings
 from src.prompt import prompt_template
 from src.database import db, User, ChatHistory, IssueReport
+from sqlalchemy import func
+import uuid
 import re
 import os
 
@@ -112,7 +114,7 @@ def get_relevant_docs_with_threshold(query, threshold=0.75):
     return filtered
 
 
-# ✅ FIXED: Medical Query Check via Mistral
+# Medical Query Check via Mistral
 def is_medical_query_llm(query):
     check_prompt = f"""<s>[INST] Is this question STRICTLY about human disease, medical symptom, drug, surgery, or clinical treatment? Answer only YES or NO. If unsure, answer NO.
 Question: {query} [/INST]"""
@@ -171,16 +173,17 @@ def logout():
     return redirect("/")
 
 
-# Chat Route
+# ✅ UPDATED: Chat Route
 @app.route("/get", methods=["POST"])
 def chat():
     if not current_user.is_authenticated:
         return jsonify({"error": "login_required"}), 401
 
     msg = request.form["msg"]
+    session_id = request.form.get("session_id", str(uuid.uuid4()))
     print("User Input:", msg)
 
-    # ✅ Step 1: Medical query check via Mistral — sabse pehle
+    # Step 1: Medical query check via Mistral
     if not is_medical_query_llm(msg):
         print("Medical check failed — non-medical query")
         return jsonify({
@@ -219,7 +222,7 @@ def chat():
             "sources": []
         })
 
-    # Step 5: Sources extract karo (sirf valid medical answer pe)
+    # Step 5: Sources extract karo
     sources = []
     for doc in source_docs:
         meta = doc.metadata
@@ -230,9 +233,10 @@ def chat():
         if source not in sources:
             sources.append(source)
 
-    # Step 6: Save Chat History
+    # Step 6: session_id ke saath save karo
     chat_data = ChatHistory(
         user_id=current_user.id,
+        session_id=session_id,
         question=msg,
         answer=response
     )
@@ -245,33 +249,59 @@ def chat():
     })
 
 
-# Get Chat History
+# ✅ UPDATED: History — session wise group
 @app.route("/history")
 def history():
     if not current_user.is_authenticated:
         return jsonify([])
-    chats = ChatHistory.query.filter_by(user_id=current_user.id).all()
-    data = []
-    for chat in chats:
-        data.append({
-            "id": chat.id,
-            "question": chat.question,
-            "answer": chat.answer
-        })
-    return jsonify(data)
 
-
-# Delete Chat
-@app.route("/delete_chat/<int:chat_id>", methods=["DELETE"])
-@login_required
-def delete_chat(chat_id):
-    chat = ChatHistory.query.filter_by(
-        id=chat_id,
+    sessions = db.session.query(
+        ChatHistory.session_id,
+        func.min(ChatHistory.question).label("first_question"),
+        func.count(ChatHistory.id).label("msg_count")
+    ).filter_by(
         user_id=current_user.id
-    ).first()
-    if not chat:
-        return jsonify({"error": "Chat not found"}), 404
-    db.session.delete(chat)
+    ).group_by(
+        ChatHistory.session_id
+    ).order_by(
+        func.max(ChatHistory.id).desc()
+    ).all()
+
+    return jsonify([{
+        "session_id": s.session_id,
+        "question": s.first_question,
+        "msg_count": s.msg_count
+    } for s in sessions])
+
+
+# ✅ NEW: Ek session ki saari messages
+@app.route("/session/<session_id>")
+@login_required
+def get_session(session_id):
+    chats = ChatHistory.query.filter_by(
+        user_id=current_user.id,
+        session_id=session_id
+    ).order_by(ChatHistory.id.asc()).all()
+
+    return jsonify([{
+        "id": chat.id,
+        "question": chat.question,
+        "answer": chat.answer
+    } for chat in chats])
+
+
+# ✅ UPDATED: Delete — poora session delete
+@app.route("/delete_chat/<session_id>", methods=["DELETE"])
+@login_required
+def delete_chat(session_id):
+    deleted = ChatHistory.query.filter_by(
+        session_id=session_id,
+        user_id=current_user.id
+    ).delete()
+
+    if not deleted:
+        return jsonify({"error": "Session not found"}), 404
+
     db.session.commit()
     return jsonify({"message": "Chat deleted successfully"})
 
