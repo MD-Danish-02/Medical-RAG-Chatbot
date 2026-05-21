@@ -1,12 +1,26 @@
 flask
+flask-login
+flask-sqlalchemy
+authlib
+
 langchain
 langchain-community
 langchain-pinecone
+langchain-core
+langchain-huggingface
+langchain-classic
+langchain-text-splitters
+
 pinecone
 sentence-transformers
-ctransformers
-pypdf
-python-dotenv
 llama-cpp-python
 
--e.
+pymupdf
+pypdf
+
+psycopg2-binary
+python-dotenv
+sqlalchemy
+requests
+
+-e .

@@ -1,8 +1,8 @@
 $(document).ready(function() {
 
             let bookmarks = JSON.parse(localStorage.getItem('med_bookmarks') || '[]');
-            let chatHistory = JSON.parse(localStorage.getItem('med_history') || '[]');
-            let currentSessionId = Date.now();
+            let chatHistory = [];
+            let currentSessionId = 'session_' + Date.now();
             let sidebarOpen = false;
             let isLoggedIn = false;
 
@@ -120,7 +120,11 @@ $(document).ready(function() {
         </div>`);
                 scrollBottom();
 
-                $.ajax({ data: { msg: raw }, type: 'POST', url: '/get' })
+                $.ajax({
+                        data: { msg: raw, session_id: currentSessionId },
+                        type: 'POST',
+                        url: '/get'
+                    })
                     .done(function(data) {
                         $('#typing-row').remove();
                         const msgId = 'msg' + Date.now();
@@ -272,9 +276,18 @@ $(document).ready(function() {
     // ════════════════════════════════════════
 
     function saveHistory(q, msgId) {
-        chatHistory.unshift({ id: Date.now(), db_id: null, q, msgId });
-        if (chatHistory.length > 20) chatHistory = chatHistory.slice(0, 20);
-        localStorage.setItem('med_history', JSON.stringify(chatHistory));
+        const existing = chatHistory.find(e => e.session_id === currentSessionId);
+        if (existing) {
+            existing.msg_count = (existing.msg_count || 1) + 1;
+        } else {
+            chatHistory.unshift({
+                id: Date.now(),
+                session_id: currentSessionId,
+                q,
+                msgId,
+                msg_count: 1
+            });
+        }
         renderHistory();
     }
 
@@ -284,25 +297,43 @@ $(document).ready(function() {
             return;
         }
         $('#history-list').html(chatHistory.map(e => `
-        <div class="history-item ${e.id === currentSessionId ? 'active' : ''}"
-             data-msgid="${e.msgId || ''}" data-id="${e.id}">
+        <div class="history-item ${e.session_id === currentSessionId ? 'active' : ''}"
+             data-sessionid="${e.session_id}" data-id="${e.id}">
             <span>💬</span>
             <span class="hi-text" title="${escHtml(e.q)}">
                 ${escHtml(e.q.substring(0, 26))}${e.q.length > 26 ? '…' : ''}
             </span>
-            <button class="hi-del-btn" onclick="deleteHistory(${e.id}, event)" title="Delete">✕</button>
+            <button class="hi-del-btn" onclick="deleteHistory('${e.session_id}', event)" title="Delete">✕</button>
         </div>`).join(''));
 
         $('#history-list .history-item').on('click', function() {
-            const msgId = $(this).data('msgid');
-            const target = $('#' + msgId);
-            if (target.length) {
-                target[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
-                target.find('.message').css('outline', '2px solid var(--primary)');
-                setTimeout(() => target.find('.message').css('outline', ''), 1500);
-                showToast('📍 Jumped to message');
-            } else {
-                showToast('⚠️ Message not found in current chat');
+            const sessionId = $(this).data('sessionid');
+            loadSession(sessionId);
+        });
+    }
+
+    function loadSession(sessionId) {
+        if (sessionId === currentSessionId) {
+            showToast('📍 Already in this chat');
+            return;
+        }
+        currentSessionId = sessionId;
+        $('#chat-box').html('');
+
+        $.ajax({
+            url: '/session/' + sessionId,
+            type: 'GET',
+            success: function(data) {
+                data.forEach(chat => {
+                    appendUserMsg(chat.question);
+                    appendBotMsg(chat.answer, 'msg' + chat.id, []);
+                });
+                scrollBottom();
+                renderHistory();
+                showToast('📂 Chat loaded');
+            },
+            error: function() {
+                showToast('❌ Failed to load chat');
             }
         });
     }
@@ -312,16 +343,13 @@ $(document).ready(function() {
             url: '/history',
             type: 'GET',
             success: function(data) {
-                chatHistory = [];
-                data.reverse().forEach(chat => {
-                    chatHistory.push({
-                        id: chat.id,
-                        db_id: chat.id,
-                        q: chat.question,
-                        a: chat.answer,
-                        msgId: ''
-                    });
-                });
+                chatHistory = data.map(s => ({
+                    id: Date.now() + Math.random(),
+                    session_id: s.session_id,
+                    q: s.question,
+                    msg_count: s.msg_count,
+                    msgId: ''
+                }));
                 renderHistory();
             },
             error: function() {
@@ -330,18 +358,13 @@ $(document).ready(function() {
         });
     }
 
-    window.deleteHistory = function(id, event) {
+    window.deleteHistory = function(sessionId, event) {
         event.stopPropagation();
-        const chatItem = chatHistory.find(e => e.id === id);
-        if (!chatItem || !chatItem.db_id) {
-            showToast('⚠️ Chat ID not found');
-            return;
-        }
         $.ajax({
-            url: '/delete_chat/' + chatItem.db_id,
+            url: '/delete_chat/' + sessionId,
             type: 'DELETE',
             success: function() {
-                chatHistory = chatHistory.filter(e => e.id !== id);
+                chatHistory = chatHistory.filter(e => e.session_id !== sessionId);
                 renderHistory();
                 showToast('🗑️ Chat deleted successfully');
             },
@@ -352,7 +375,7 @@ $(document).ready(function() {
     };
 
     window.newChat = function() {
-        currentSessionId = Date.now();
+        currentSessionId = 'session_' + Date.now();
         $('#chat-box').html(`
         <div class="msg-row">
             <div class="bot-avatar">📖</div>
@@ -362,6 +385,7 @@ $(document).ready(function() {
                 </div>
             </div>
         </div>`);
+        renderHistory();
         showToast('✨ New chat started');
     };
 
@@ -392,13 +416,14 @@ $(document).ready(function() {
     // ══ BOOKMARKS ══
     // ════════════════════════════════════════
 
+    // ✅ UPDATED: Hover pe full text tooltip
     function renderBookmarks() {
         if (!bookmarks.length) {
             $('#bookmark-list').html('<div class="empty-state">No bookmarks yet.<br>Click 🔖 on any answer to save it.</div>');
             return;
         }
         $('#bookmark-list').html(bookmarks.map(b => `
-        <div class="bookmark-item">
+        <div class="bookmark-item" title="${escHtml(b.text)}">
             ${escHtml(b.text.substring(0, 200))}${b.text.length > 200 ? '…' : ''}
             <span class="bk-del" onclick="deleteBookmark(${b.id})">✕</span>
         </div>`).join(''));
