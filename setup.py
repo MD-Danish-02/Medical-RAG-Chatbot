@@ -6,7 +6,7 @@ setup(
 
     version="0.0.1",
 
-    author="Mohammad Danish Alam",
+    author="Muhammad Danish Alam",
 
     author_email="mddanishniet@gmail.com",
 

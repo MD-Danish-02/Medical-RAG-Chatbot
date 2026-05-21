@@ -173,7 +173,7 @@ def logout():
     return redirect("/")
 
 
-# ✅ UPDATED: Chat Route
+# Chat Route
 @app.route("/get", methods=["POST"])
 def chat():
     if not current_user.is_authenticated:
@@ -214,7 +214,8 @@ def chat():
     response = clean_response(response)
     print("Response:", response)
 
-    # Step 4: Agar LLM ne refuse kiya toh sources mat dikhao
+    # Step 4: If the LLM refuses, then do not show the sources.
+
     REFUSAL_PHRASE = "I can only answer medical questions"
     if REFUSAL_PHRASE in response:
         return jsonify({
@@ -222,7 +223,7 @@ def chat():
             "sources": []
         })
 
-    # Step 5: Sources extract karo
+    # Step 5: Extract sources
     sources = []
     for doc in source_docs:
         meta = doc.metadata
@@ -233,7 +234,8 @@ def chat():
         if source not in sources:
             sources.append(source)
 
-    # Step 6: session_id ke saath save karo
+    # Step 6: Save with the session_id.
+
     chat_data = ChatHistory(
         user_id=current_user.id,
         session_id=session_id,
@@ -249,7 +251,7 @@ def chat():
     })
 
 
-# ✅ UPDATED: History — session wise group
+# History — session wise group
 @app.route("/history")
 def history():
     if not current_user.is_authenticated:
@@ -274,7 +276,8 @@ def history():
     } for s in sessions])
 
 
-# ✅ NEW: Ek session ki saari messages
+# All messages from one session.
+
 @app.route("/session/<session_id>")
 @login_required
 def get_session(session_id):
@@ -290,7 +293,8 @@ def get_session(session_id):
     } for chat in chats])
 
 
-# ✅ UPDATED: Delete — poora session delete
+# Delete the entire session.
+
 @app.route("/delete_chat/<session_id>", methods=["DELETE"])
 @login_required
 def delete_chat(session_id):

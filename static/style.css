@@ -437,7 +437,7 @@ body {
 }
 
 
-/* ══ LOGIN HEADER BUTTON ══ */
+/* LOGIN HEADER BUTTON */
 
 #login-header-btn {
     display: none;
@@ -959,9 +959,6 @@ body {
     margin-top: 4px;
 }
 
-
-/* ✅ UPDATED: Bookmark item with hover tooltip */
-
 .bookmark-item {
     padding: 9px 11px;
     background: var(--surface2);
@@ -1058,7 +1055,7 @@ body {
 
 
 /* ════════════════════════════════════════
-   ══ PROFILE RAIL — Bottom-Left Claude-style ══
+   ══ PROFILE RAIL ══
    ════════════════════════════════════════ */
 
 .profile-rail-wrapper {
@@ -1232,7 +1229,7 @@ body {
 }
 
 
-/* ══ LOGIN MODAL — Google button hover ══ */
+/* ══ LOGIN MODAL ══ */
 
 #login-modal a:hover {
     background: #f1f8f1 !important;
@@ -1292,14 +1289,14 @@ body {
         display: none;
     }
     .sidebar-panel {
-        position: absolute;
+        position: fixed;
         left: 44px;
         top: 0;
         height: 100dvh;
-        z-index: 100;
+        z-index: 200;
         width: 220px;
         min-width: 220px;
-        box-shadow: 4px 0 20px rgba(0, 0, 0, 0.18);
+        box-shadow: 4px 0 20px rgba(0, 0, 0, 0.3);
     }
     .sidebar-panel.closed {
         width: 0;
@@ -1318,10 +1315,14 @@ body {
         font-size: 14px;
     }
     .header-title h1 {
-        font-size: 13px;
+        font-size: 12px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 140px;
     }
     .header-title p {
-        font-size: 9px;
+        display: none;
     }
     .hdr-btn {
         width: 28px;
@@ -1442,7 +1443,8 @@ body {
 
 @media (max-width: 380px) {
     .header-title h1 {
-        font-size: 12px;
+        font-size: 11px;
+        max-width: 110px;
     }
     .header-actions {
         gap: 4px;
