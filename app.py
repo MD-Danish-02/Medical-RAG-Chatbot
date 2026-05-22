@@ -9,7 +9,7 @@ from flask_login import LoginManager, login_user, login_required, logout_user, c
 from authlib.integrations.flask_client import OAuth
 from src.helper import download_hugging_face_embeddings
 from src.prompt import prompt_template
-from src.database import db, User, ChatHistory, IssueReport
+from src.database import db, User, ChatHistory, IssueReport, Bookmark
 from sqlalchemy import func
 import uuid
 import re
@@ -352,11 +352,65 @@ def report():
     return jsonify({"message": "Report received"}), 200
 
 
+
+
+# Get Bookmarks
+@app.route("/bookmarks")
+@login_required
+def get_bookmarks():
+    bookmarks = Bookmark.query.filter_by(
+        user_id=current_user.id
+    ).order_by(Bookmark.created_at.desc()).all()
+
+    return jsonify([{
+        "id": b.id,
+        "text": b.text
+    } for b in bookmarks])
+
+
+# Add Bookmark
+@app.route("/bookmarks", methods=["POST"])
+@login_required
+def add_bookmark():
+    data = request.get_json()
+    bookmark = Bookmark(
+        user_id=current_user.id,
+        text=data.get("text", "")
+    )
+    db.session.add(bookmark)
+    db.session.commit()
+    return jsonify({"id": bookmark.id, "message": "Saved"})
+
+
+# Delete Bookmark
+@app.route("/bookmarks/<int:bookmark_id>", methods=["DELETE"])
+@login_required
+def delete_bookmark_db(bookmark_id):
+    bookmark = Bookmark.query.filter_by(
+        id=bookmark_id,
+        user_id=current_user.id
+    ).first()
+    if not bookmark:
+        return jsonify({"error": "Not found"}), 404
+    db.session.delete(bookmark)
+    db.session.commit()
+    return jsonify({"message": "Deleted"})
+
+
+# Clear All Bookmarks
+@app.route("/bookmarks/clear", methods=["DELETE"])
+@login_required
+def clear_bookmarks():
+    Bookmark.query.filter_by(user_id=current_user.id).delete()
+    db.session.commit()
+    return jsonify({"message": "Cleared"})
+
+
 # Run Flask App
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
-        print("✅ Users, Chat History & Issue Reports Tables Created!")
+        print("✅ Users, Chat History, Issue Reports & Bookmark Tables Created!")
     app.run(
         host="0.0.0.0",
         port=8080,

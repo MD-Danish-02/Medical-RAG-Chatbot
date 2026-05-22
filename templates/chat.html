@@ -105,7 +105,10 @@
                     </button>
                     <div class="header-icon">🩺</div>
                     <div class="header-title">
-                        <h1>Medical Encyclopedia</h1>
+                        <h1>
+                            <span class="title-desktop">Medical Encyclopedia</span>
+                            <span class="title-mobile">Med Encyclopedia</span>
+                        </h1>
                         <p>Powered by RAG · Gale Encyclopedia of Medicine</p>
                     </div>
                 </div>
@@ -151,8 +154,9 @@
                 <span class="char-count" id="char-count">0 / 500</span>
             </div>
 
+            <!-- ══ UPDATED: textarea instead of input ══ -->
             <div class="chat-input">
-                <input type="text" id="text" placeholder="Ask a medical question..." maxlength="500">
+                <textarea id="text" placeholder="Ask a medical question…" maxlength="500" rows="1"></textarea>
                 <button class="send-btn" id="send">➤</button>
             </div>
 
