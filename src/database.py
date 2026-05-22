@@ -30,3 +30,12 @@ class IssueReport(db.Model):
     description = db.Column(db.Text)
     email = db.Column(db.String(200), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class Bookmark(db.Model):
+    __tablename__ = 'bookmarks'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    text = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)

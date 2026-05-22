@@ -229,7 +229,7 @@ body {
 }
 
 
-/* ══ SIDEBAR PROFILE — bottom ══ */
+/* ══ SIDEBAR PROFILE ══ */
 
 .sidebar-profile {
     border-top: 1px solid var(--sidebar-border);
@@ -304,9 +304,6 @@ body {
     color: var(--text-muted);
     flex-shrink: 0;
 }
-
-
-/* Profile dropdown — opens upward */
 
 .profile-dropdown {
     position: absolute;
@@ -457,7 +454,7 @@ body {
 }
 
 
-/* ══ SIDEBAR OVERLAY — mobile ══ */
+/* ══ SIDEBAR OVERLAY ══ */
 
 .sidebar-overlay {
     display: none;
@@ -537,6 +534,14 @@ body {
     color: rgba(255, 255, 255, 0.7);
     margin-top: 1px;
     white-space: nowrap;
+}
+
+.title-mobile {
+    display: none;
+}
+
+.title-desktop {
+    display: inline;
 }
 
 .header-actions {
@@ -860,36 +865,50 @@ body {
 }
 
 
-/* ══ CHAT INPUT ══ */
+/* ══ CHAT INPUT — TEXTAREA VERSION ══ */
 
 .chat-input {
     display: flex;
     padding: 10px 14px;
     background: var(--surface);
     gap: 8px;
-    align-items: center;
+    /* align-items: flex-end so send button stays at bottom when textarea grows */
+    align-items: flex-end;
     border-top: 1px solid var(--border);
     flex-shrink: 0;
 }
 
-.chat-input input {
+
+/* ── Replaced <input> with <textarea> ── */
+
+.chat-input textarea {
     flex: 1;
     padding: 11px 15px;
     border: 1.5px solid var(--border);
-    border-radius: 50px;
+    border-radius: 22px;
     outline: none;
     font-size: 13.5px;
     background: var(--surface2);
     color: var(--text);
     font-family: 'Source Sans 3', sans-serif;
     transition: border-color 0.2s;
+    resize: none;
+    overflow-y: hidden;
+    min-height: 44px;
+    max-height: 160px;
+    line-height: 1.5;
+    scrollbar-width: none;
 }
 
-.chat-input input::placeholder {
+.chat-input textarea::-webkit-scrollbar {
+    display: none;
+}
+
+.chat-input textarea::placeholder {
     color: var(--text-muted);
 }
 
-.chat-input input:focus {
+.chat-input textarea:focus {
     border-color: var(--primary);
     background: var(--surface);
 }
@@ -907,6 +926,8 @@ body {
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    /* align-self: flex-end keeps button pinned to bottom of flex row */
+    align-self: flex-end;
     transition: background 0.2s, transform 0.15s;
 }
 
@@ -1094,6 +1115,9 @@ body {
     background: var(--surface2);
 }
 
+
+/* ══ BOOKMARKS ══ */
+
 .bookmark-list {
     max-height: 290px;
     overflow-y: auto;
@@ -1108,48 +1132,55 @@ body {
     background: var(--surface2);
     border: 1px solid var(--border);
     border-radius: 8px;
-    font-size: 12.5px;
-    color: var(--text);
-    line-height: 1.5;
-    position: relative;
-    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    transition: border-color 0.15s;
 }
 
 .bookmark-item:hover {
     border-color: var(--primary);
 }
 
-.bookmark-item:hover::after {
-    content: attr(title);
-    position: absolute;
-    left: 0;
-    top: 100%;
-    margin-top: 4px;
-    z-index: 999;
-    background: var(--surface);
-    border: 1.5px solid var(--border);
-    border-radius: 8px;
-    padding: 10px 12px;
+.bk-text {
     font-size: 12.5px;
-    line-height: 1.6;
     color: var(--text);
-    width: 100%;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    white-space: pre-wrap;
-    word-break: break-word;
+    line-height: 1.5;
+}
+
+.bk-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.bk-copy {
+    font-size: 11px;
+    color: var(--primary);
+    cursor: pointer;
+    padding: 2px 10px;
+    border: 1px solid var(--primary);
+    border-radius: 12px;
+    transition: all 0.15s;
+}
+
+.bk-copy:hover {
+    background: var(--primary);
+    color: white;
 }
 
 .bk-del {
-    position: absolute;
-    top: 7px;
-    right: 8px;
     font-size: 11px;
     cursor: pointer;
-    color: var(--text-muted);
+    color: #e53935;
+    padding: 2px 10px;
+    border: 1px solid rgba(229, 57, 53, 0.3);
+    border-radius: 12px;
+    transition: all 0.15s;
 }
 
 .bk-del:hover {
-    color: #e53935;
+    background: rgba(229, 57, 53, 0.1);
 }
 
 .empty-state {
@@ -1228,7 +1259,7 @@ body {
 }
 
 
-/* ══ MOBILE ══ */
+/* ══ RESPONSIVE — MOBILE ══ */
 
 @media (max-width: 768px) {
     body {
@@ -1243,7 +1274,6 @@ body {
         border: none;
         box-shadow: none;
     }
-    /* Sidebar overlays on mobile */
     .sidebar-panel {
         position: fixed;
         left: 0;
@@ -1271,9 +1301,14 @@ body {
         height: 28px;
         font-size: 14px;
     }
+    .title-desktop {
+        display: none;
+    }
+    .title-mobile {
+        display: inline;
+    }
     .header-title h1 {
         font-size: 13px;
-        max-width: 130px;
     }
     .header-title p {
         display: none;
@@ -1316,6 +1351,10 @@ body {
         padding: 2px 7px;
         font-size: 10px;
     }
+    .source-citation {
+        font-size: 10px;
+        padding: 4px 8px;
+    }
     .report-bar {
         padding: 5px 10px;
     }
@@ -1327,9 +1366,11 @@ body {
         padding: 8px 10px;
         gap: 6px;
     }
-    .chat-input input {
+    .chat-input textarea {
         font-size: 13px;
         padding: 9px 13px;
+        min-height: 40px;
+        border-radius: 18px;
     }
     .send-btn {
         width: 38px;
@@ -1358,18 +1399,19 @@ body {
         left: 4px;
         right: 4px;
     }
-    .bookmark-item:hover::after {
-        display: none;
-    }
     .sp-email {
         display: none;
+    }
+    .bk-copy,
+    .bk-del {
+        font-size: 10px;
+        padding: 2px 8px;
     }
 }
 
 @media (max-width: 380px) {
     .header-title h1 {
         font-size: 11px;
-        max-width: 100px;
     }
     .header-actions {
         gap: 3px;
@@ -1386,9 +1428,10 @@ body {
     .msg-content {
         max-width: 92%;
     }
-    .chat-input input {
+    .chat-input textarea {
         font-size: 12px;
         padding: 8px 11px;
+        min-height: 38px;
     }
     .send-btn {
         width: 35px;
