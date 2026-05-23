@@ -374,7 +374,7 @@ $.ajax({
     success: function(data) {
         data.forEach(chat => {
             appendUserMsg(chat.question);
-            appendBotMsg(chat.answer, 'msg' + chat.id, []);
+            appendBotMsg(chat.answer, 'msg' + chat.id, chat.sources || []);
         });
         scrollBottom();
         renderHistory();
