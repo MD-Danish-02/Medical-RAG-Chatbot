@@ -1,3 +1,4 @@
+```markdown
 # Medical-RAG-Chatbot
 
 AI-powered Medical Encyclopedia Chatbot using **RAG (Retrieval-Augmented Generation)** architecture with **Mistral 7B**, **LangChain**, **Pinecone**, **Flask**, and **PostgreSQL** for intelligent medical question answering from PDF-based medical knowledge sources — with full **Google OAuth authentication**, persistent session-based chat history, and **multi-layer hallucination filtering**.
@@ -14,13 +15,15 @@ This project combines:
 
 * Retrieval-Augmented Generation (RAG)
 * Local LLM inference (Mistral 7B)
-* Multi-layer hallucination filtering (~90% reduction)
+* Multi-layer hallucination filtering (~95% reduction)
 * Vector databases (Pinecone)
 * Medical PDF processing
-* Modern responsive frontend UI
+* Modern responsive frontend UI (desktop + mobile)
 * Flask backend integration
 * Google OAuth 2.0 Authentication
 * PostgreSQL persistent storage with session-based chat history
+* PostgreSQL-backed bookmarks (per-user)
+* Source citation persistence across sessions
 * Guest mode with login-on-demand
 
 The system is designed to provide accurate, source-cited educational medical information in a clean and interactive interface.
@@ -29,29 +32,43 @@ The system is designed to provide accurate, source-cited educational medical inf
 
 # Demo
 
-## Light Mode — Home Screen
+### 🌞 Light Mode Desktop Homepage
+![Light Mode Desktop Homepage](assets/screenshots/light-mode-desktop-homepage.png)
 
-![Light Mode Home](assets/screenshots/screenshot_1_light_home.png)
+---
 
-## Dark Mode — Home Screen
+### 🌙 Dark Mode Desktop Homepage
+![Dark Mode Desktop Homepage](assets/screenshots/dark-mode-desktop-homepage.png)
 
-![Dark Mode Home](assets/screenshots/screenshot_2_dark_home.png)
+---
 
-## Chat in Action — Typing Animation
+### 📂 Desktop Sidebar (Guest Mode)
+![Desktop Sidebar Guest Mode](assets/screenshots/desktop-sidebar-guest-mode.png)
 
-![Typing Animation](assets/screenshots/screenshot_3_Typing_animation.png)
+---
 
-## RAG Response — Query Response with Source Citation
+### 👤 Desktop Sidebar (Authenticated User)
+![Desktop Sidebar Authenticated](assets/screenshots/desktop-sidebar-authenticated.png)
 
-![Query Response](assets/screenshots/screenshot4_Query_Response.png)
+---
 
-## Guest Mode — Login Modal on Message Send
+### 💬 Desktop Chat Response
+![Desktop Chat Response](assets/screenshots/desktop-chat-response.png)
 
-![Login Modal](assets/screenshots/screenshot_5_login_modal.png)
+---
 
-## Logged In — Profile Dropdown
+### 📱 Mobile Homepage
+![Mobile Homepage](assets/screenshots/mobile-homepage.jpeg)
 
-![Profile Dropdown](assets/screenshots/screenshot_6_profile_dropdown.png)
+---
+
+### 📱 Mobile Sidebar (Authenticated)
+![Mobile Sidebar Authenticated](assets/screenshots/mobile-sidebar-authenticated.jpeg)
+
+---
+
+### 📱 Mobile Chat Response
+![Mobile Chat Response](assets/screenshots/mobile-chat-response.jpeg)
 
 ---
 
@@ -63,8 +80,9 @@ The system is designed to provide accurate, source-cited educational medical inf
 * Local Mistral 7B Inference (GGUF)
 * Pinecone Vector Database with MMR Search
 * PDF Knowledge Base (Gale Encyclopedia of Medicine)
-* Multi-layer Hallucination Filtering (~90% reduction)
+* Multi-layer Hallucination Filtering (~95% reduction)
 * Strict Medical-only Query Enforcement
+* Source citations persisted to PostgreSQL — visible after refresh and session reload
 
 ## Hallucination Filtering — 3-Layer Pipeline
 ```text
@@ -88,32 +106,43 @@ Layer 3 — Refusal Phrase Check
 * Login-on-demand — modal appears on first message
 * Persistent user profiles (name, email, avatar, joined date)
 * Secure logout
-* Account deletion with full data wipe
+* Account deletion with full data wipe (chats + bookmarks)
 * Per-user data isolation via user_id
 
 ## Chat & History
 * PostgreSQL-backed session-based chat history
 * Per-user chat history isolation
 * Session-grouped history — one conversation = one sidebar entry
-* Click session to reload full conversation
+* Click session to reload full conversation with source citations
 * Delete entire session with one click
 * New chat session support
 * Source citations hidden on refused responses
+* Source citations persisted — visible on page refresh and session reload
+
+## Bookmarks
+* PostgreSQL-backed per-user bookmark storage
+* Save any bot response with one click
+* Copy full bookmark text to clipboard
+* Delete individual bookmarks
+* Clear all bookmarks at once
+* Bookmark badge count in header
+* No localStorage dependency — fully server-side
 
 ## UI & Experience
 * Dark / Light Theme Toggle
 * Typing Animation
-* Medical Category Navigation chips
-* Bookmarks — save any bot response with hover tooltip preview
+* Medical Category Navigation Chips (book-based topics)
+* Responsive layout — desktop and mobile optimized
 * PDF Export of chat as HTML
 * Report Issue Modal with Email support
 * Character counter on input
 * Toast notifications
-* Responsive layout with icon rail sidebar
+* Source citation display under each response
+* Copy, Listen (TTS), Save buttons on each message
 
 ## Backend & Infrastructure
 * Flask REST API
-* PostgreSQL database (users + session-based chat history + issue reports)
+* PostgreSQL database (users + session-based chat history + bookmarks + issue reports)
 * Flask-Login session management
 * Authlib OAuth integration
 * SQLAlchemy ORM
@@ -169,7 +198,7 @@ Layer 2 — Pinecone Similarity Score Threshold (≥ 0.75)
       ↓ (PASS)
 Layer 3 — LLM Answer + Refusal Phrase Check
       ↓
-Response Saved to PostgreSQL (with session_id)
+Response + Sources Saved to PostgreSQL (with session_id)
       ↓
 Response + Source Citations Displayed in UI
 ```
@@ -241,12 +270,14 @@ Medical-RAG-Chatbot/
 │
 ├── assets/
 │   └── screenshots/
-│       ├── screenshot_1_light_home.png
-│       ├── screenshot_2_dark_home.png
-│       ├── screenshot_3_Typing_animation.png
-│       ├── screenshot4_Query_Response.png
-│       ├── screenshot_5_login_modal.png
-│       └── screenshot_6_profile_dropdown.png
+│       ├── light-mode-desktop-homepage.png
+│       ├── dark-mode-desktop-homepage.png
+│       ├── desktop-sidebar-guest-mode.png
+│       ├── desktop-sidebar-authenticated.png
+│       ├── desktop-chat-response.png
+│       ├── mobile-homepage.jpeg
+│       ├── mobile-sidebar-authenticated.jpeg
+│       └── mobile-chat-response.jpeg
 │
 ├── static/
 │   ├── style.css
@@ -323,7 +354,7 @@ Mistral 7B generates the final response using retrieved context only.
 
 ## Step 7 — Storage
 
-Response and question are saved to PostgreSQL under the authenticated user with a unique session_id.
+Response, question, and source citations are saved to PostgreSQL under the authenticated user with a unique session_id.
 
 ---
 
@@ -403,13 +434,21 @@ Create database:
 CREATE DATABASE rag_db;
 ```
 
-Add session_id column (if upgrading from older version):
+If upgrading from an older version, run these migrations manually:
 
 ```sql
 ALTER TABLE chat_history ADD COLUMN session_id VARCHAR(100);
+ALTER TABLE chat_history ADD COLUMN sources JSON;
 ```
 
-Tables are auto-created on first run via SQLAlchemy.
+Tables are auto-created on first run via SQLAlchemy:
+
+```text
+users
+chat_history
+issue_reports
+bookmarks
+```
 
 ---
 
@@ -463,11 +502,15 @@ http://127.0.0.1:8080
 | GET | /logout | No | Logout user |
 | POST | /get | Yes | Send message, get RAG answer |
 | GET | /history | No | Get session-grouped chat history |
-| GET | /session/\<session_id\> | Yes | Load full session messages |
+| GET | /session/\<session_id\> | Yes | Load full session messages with sources |
 | DELETE | /delete_chat/\<session_id\> | Yes | Delete entire session |
 | GET | /profile | Yes | Get user profile info |
 | DELETE | /delete_account | Yes | Delete account + all data |
 | POST | /report | No | Submit issue report |
+| GET | /bookmarks | Yes | Get user bookmarks |
+| POST | /bookmarks | Yes | Save a bookmark |
+| DELETE | /bookmarks/\<id\> | Yes | Delete a bookmark |
+| DELETE | /bookmarks/clear | Yes | Clear all bookmarks |
 
 ---
 
@@ -490,12 +533,13 @@ http://127.0.0.1:8080
 * Guest Mode — no login required to browse
 * Login Modal — appears on first message send
 * Profile Dropdown — avatar, name, email, chat count, joined date
-* Session-based Chat History Sidebar — click to reload conversation
-* Bookmarks — save any response with hover tooltip for full text preview
-* HTML Export — download full chat
+* Session-based Chat History Sidebar — click to reload conversation with citations
+* Bookmarks — PostgreSQL-backed per-user storage, copy & delete support
+* HTML Export — download full chat with source citations
 * Report Issue — modal with email support
 * Theme Toggle — dark / light mode
 * Copy, Listen (TTS), Save buttons on each message
+* Source citations persist across page refresh and session reload
 
 ---
 
@@ -612,7 +656,6 @@ All correctly refused after multi-layer filtering implementation.
 * CPU inference — response time 60-90 seconds per query
 * BAAI/bge-small-en-v1.5 is general purpose, not medical-specific
 * No streaming responses
-* Bookmarks stored in localStorage (not database-backed)
 * Single PDF knowledge source
 
 ---
@@ -622,7 +665,6 @@ All correctly refused after multi-layer filtering implementation.
 * Streaming Responses
 * GPU Acceleration
 * PubMedBERT medical-specific embeddings
-* Database-backed Bookmarks
 * Voice Input
 * Multi-PDF Support
 * Docker Deployment
@@ -671,3 +713,4 @@ This project is licensed under the [MIT License](https://github.com/MD-Danish-02
 * Google OAuth
 * PostgreSQL
 * Gale Encyclopedia of Medicine
+```
