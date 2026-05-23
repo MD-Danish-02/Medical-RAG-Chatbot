@@ -1,4 +1,3 @@
-```markdown
 # Medical-RAG-Chatbot
 
 AI-powered Medical Encyclopedia Chatbot using **RAG (Retrieval-Augmented Generation)** architecture with **Mistral 7B**, **LangChain**, **Pinecone**, **Flask**, and **PostgreSQL** for intelligent medical question answering from PDF-based medical knowledge sources — with full **Google OAuth authentication**, persistent session-based chat history, and **multi-layer hallucination filtering**.
@@ -713,4 +712,3 @@ This project is licensed under the [MIT License](https://github.com/MD-Danish-02
 * Google OAuth
 * PostgreSQL
 * Gale Encyclopedia of Medicine
-```
