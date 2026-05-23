@@ -4,7 +4,8 @@ from pinecone import Pinecone
 from langchain_pinecone import PineconeVectorStore
 from langchain_core.prompts import PromptTemplate
 from langchain_classic.chains import RetrievalQA
-from langchain_community.llms import LlamaCpp
+#from langchain_community.llms import LlamaCpp
+from langchain_groq import ChatGroq
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
 from authlib.integrations.flask_client import OAuth
 from src.helper import download_hugging_face_embeddings
@@ -77,17 +78,27 @@ PROMPT = PromptTemplate(
 chain_type_kwargs = {"prompt": PROMPT}
 
 # Load Mistral Model
-llm = LlamaCpp(
-    model_path="model/mistral-7b-instruct-v0.2.Q4_K_M.gguf",
+# llm = LlamaCpp(
+#     model_path="model/mistral-7b-instruct-v0.2.Q4_K_M.gguf",
+#     temperature=0.0,
+#     max_tokens=350,
+#     top_p=0.9,
+#     repeat_penalty=1.15,
+#     n_ctx=2048,
+#     n_threads=2,
+#     n_batch=64,
+#     stop=["Question:", "User:"],
+#     verbose=False
+# )
+
+
+
+# Load Groq Model
+llm = ChatGroq(
+    model="llama-3.1-8b-instant",
     temperature=0.0,
     max_tokens=350,
-    top_p=0.9,
-    repeat_penalty=1.15,
-    n_ctx=2048,
-    n_threads=2,
-    n_batch=64,
-    stop=["Question:", "User:"],
-    verbose=False
+    groq_api_key=os.environ.get("GROQ_API_KEY")
 )
 
 # Create Retrieval QA Chain
@@ -118,8 +129,16 @@ def get_relevant_docs_with_threshold(query, threshold=0.75):
 def is_medical_query_llm(query):
     check_prompt = f"""<s>[INST] Is this question STRICTLY about human disease, medical symptom, drug, surgery, or clinical treatment? Answer only YES or NO. If unsure, answer NO.
 Question: {query} [/INST]"""
-    result = llm.invoke(check_prompt, max_tokens=5, temperature=0.0)
-    return "YES" in result.strip().upper()
+
+    #result = llm.invoke(check_prompt, max_tokens=5, temperature=0.0)
+    #return "YES" in result.strip().upper()
+
+    result = llm.invoke(check_prompt)
+
+    response_text = result.content.strip().upper()
+
+    return "YES" in response_text
+    
 
 
 # Clean Response Helper

@@ -13,7 +13,8 @@ langchain-text-splitters
 
 pinecone
 sentence-transformers
-llama-cpp-python
+#llama-cpp-python
+langchain-groq
 
 pymupdf
 pypdf
