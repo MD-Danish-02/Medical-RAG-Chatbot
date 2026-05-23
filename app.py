@@ -214,8 +214,7 @@ def chat():
     response = clean_response(response)
     print("Response:", response)
 
-    # Step 4: If the LLM refuses, then do not show the sources.
-
+    # Step 4: Refusal check
     REFUSAL_PHRASE = "I can only answer medical questions"
     if REFUSAL_PHRASE in response:
         return jsonify({
@@ -234,13 +233,13 @@ def chat():
         if source not in sources:
             sources.append(source)
 
-    # Step 6: Save with the session_id.
-
+    # Step 6: Save with session_id and sources
     chat_data = ChatHistory(
         user_id=current_user.id,
         session_id=session_id,
         question=msg,
-        answer=response
+        answer=response,
+        sources=sources
     )
     db.session.add(chat_data)
     db.session.commit()
@@ -276,8 +275,7 @@ def history():
     } for s in sessions])
 
 
-# All messages from one session.
-
+# All messages from one session
 @app.route("/session/<session_id>")
 @login_required
 def get_session(session_id):
@@ -289,12 +287,12 @@ def get_session(session_id):
     return jsonify([{
         "id": chat.id,
         "question": chat.question,
-        "answer": chat.answer
+        "answer": chat.answer,
+        "sources": chat.sources or []
     } for chat in chats])
 
 
-# Delete the entire session.
-
+# Delete entire session
 @app.route("/delete_chat/<session_id>", methods=["DELETE"])
 @login_required
 def delete_chat(session_id):
@@ -331,6 +329,7 @@ def delete_account():
     user_id = current_user.id
     logout_user()
     ChatHistory.query.filter_by(user_id=user_id).delete()
+    Bookmark.query.filter_by(user_id=user_id).delete()
     User.query.filter_by(id=user_id).delete()
     db.session.commit()
     return jsonify({"message": "Account deleted successfully"})
@@ -350,8 +349,6 @@ def report():
     db.session.commit()
     print(f"📩 Report saved: [{issue.issue_type}] by user_id={issue.user_id}")
     return jsonify({"message": "Report received"}), 200
-
-
 
 
 # Get Bookmarks
