@@ -4,7 +4,6 @@ from pinecone import Pinecone
 from langchain_pinecone import PineconeVectorStore
 from langchain_core.prompts import PromptTemplate
 from langchain_classic.chains import RetrievalQA
-#from langchain_community.llms import LlamaCpp
 from langchain_groq import ChatGroq
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
 from authlib.integrations.flask_client import OAuth
@@ -77,27 +76,11 @@ PROMPT = PromptTemplate(
 )
 chain_type_kwargs = {"prompt": PROMPT}
 
-# Load Mistral Model
-# llm = LlamaCpp(
-#     model_path="model/mistral-7b-instruct-v0.2.Q4_K_M.gguf",
-#     temperature=0.0,
-#     max_tokens=350,
-#     top_p=0.9,
-#     repeat_penalty=1.15,
-#     n_ctx=2048,
-#     n_threads=2,
-#     n_batch=64,
-#     stop=["Question:", "User:"],
-#     verbose=False
-# )
-
-
-
 # Load Groq Model
 llm = ChatGroq(
     model="llama-3.1-8b-instant",
     temperature=0.0,
-    max_tokens=350,
+    max_tokens=500,
     groq_api_key=os.environ.get("GROQ_API_KEY")
 )
 
@@ -108,8 +91,8 @@ qa = RetrievalQA.from_chain_type(
     retriever=docsearch.as_retriever(
         search_type="mmr",
         search_kwargs={
-            "k": 2,
-            "fetch_k": 6,
+            "k": 3,
+            "fetch_k": 9,
             "lambda_mult": 0.5
         }
     ),
@@ -119,37 +102,89 @@ qa = RetrievalQA.from_chain_type(
 
 
 # Similarity Score Threshold Check
-def get_relevant_docs_with_threshold(query, threshold=0.75):
-    results = docsearch.similarity_search_with_relevance_scores(query, k=2)
+def get_relevant_docs_with_threshold(query, threshold=0.0):
+    results = docsearch.similarity_search_with_relevance_scores(query, k=3)
     filtered = [doc for doc, score in results if score >= threshold]
     return filtered
 
 
-# Medical Query Check via Mistral
+# Medical Query Check via Groq
 def is_medical_query_llm(query):
-    check_prompt = f"""<s>[INST] Is this question STRICTLY about human disease, medical symptom, drug, surgery, or clinical treatment? Answer only YES or NO. If unsure, answer NO.
-Question: {query} [/INST]"""
+    check_prompt = f"""You are a medical query classifier.
 
-    #result = llm.invoke(check_prompt, max_tokens=5, temperature=0.0)
-    #return "YES" in result.strip().upper()
+Is the following question related to any medical topic including diseases, infections, symptoms, treatments, drugs, surgery, anatomy, or public health?
+
+Answer ONLY with YES or NO.
+
+Question: {query}
+
+Answer:"""
 
     result = llm.invoke(check_prompt)
-
     response_text = result.content.strip().upper()
-
     return "YES" in response_text
-    
 
 
-# Clean Response Helper
+# ── Clean Response: returns formatted HTML ──────────────────────────────────
 def clean_response(text):
-    text = re.sub(r'\s+', ' ', text)
-    text = re.sub(r'[-=*]{2,}', '', text)
-    text = text.replace("•", "\n•")
-    text = text.replace("*", "\n•")
+    # Remove **bold** markdown
+    text = re.sub(r'\*\*(.*?)\*\*', r'\1', text)
+
+    # Remove horizontal rules
+    text = re.sub(r'={2,}', '', text)
+    text = re.sub(r'-{3,}', '', text)
     text = text.replace("===", "")
-    text = re.sub(r'\n+', '\n', text)
-    return text.strip()
+
+    # Split into lines and build HTML
+    lines = text.split('\n')
+    html_parts = []
+    list_type = None   # None | 'ul' | 'ol'
+
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+
+        # Bullet line: starts with * or • or - (single dash)
+        if re.match(r'^[-\*•]\s+', line):
+            if list_type != 'ul':
+                if list_type == 'ol':
+                    html_parts.append('</ol>')
+                html_parts.append('<ul>')
+                list_type = 'ul'
+            content = re.sub(r'^[-\*•]\s+', '', line)
+            html_parts.append(f'<li>{content}</li>')
+
+        # Numbered list: starts with 1. 2. etc.
+        elif re.match(r'^\d+\.\s+', line):
+            if list_type != 'ol':
+                if list_type == 'ul':
+                    html_parts.append('</ul>')
+                html_parts.append('<ol>')
+                list_type = 'ol'
+            content = re.sub(r'^\d+\.\s+', '', line)
+            html_parts.append(f'<li>{content}</li>')
+
+        # Section heading (e.g. "Causes:", "Symptoms:" — ends with colon)
+        elif re.match(r'^[A-Za-z ]{2,40}:\s*$', line):
+            if list_type:
+                html_parts.append(f'</{list_type}>')
+                list_type = None
+            html_parts.append(f'<p><strong>{line}</strong></p>')
+
+        # Normal paragraph
+        else:
+            if list_type:
+                html_parts.append(f'</{list_type}>')
+                list_type = None
+            html_parts.append(f'<p>{line}</p>')
+
+    # Close any open list
+    if list_type:
+        html_parts.append(f'</{list_type}>')
+
+    return '\n'.join(html_parts)
+# ────────────────────────────────────────────────────────────────────────────
 
 
 # Home Route
@@ -202,20 +237,20 @@ def chat():
     session_id = request.form.get("session_id", str(uuid.uuid4()))
     print("User Input:", msg)
 
-    # Step 1: Medical query check via Mistral
+    # Step 1: Medical query check via Groq
     if not is_medical_query_llm(msg):
         print("Medical check failed — non-medical query")
         return jsonify({
-            "answer": "I can only answer medical questions based on the Gale Encyclopedia of Medicine.",
+            "answer": "<p>I can only answer medical questions based on the Gale Encyclopedia of Medicine.</p>",
             "sources": []
         })
 
-    # Step 2: Similarity threshold check
-    relevant_docs = get_relevant_docs_with_threshold(msg, threshold=0.75)
+    # Step 2: Retrieve relevant docs
+    relevant_docs = get_relevant_docs_with_threshold(msg, threshold=0.0)
     if not relevant_docs:
-        print("Threshold check failed — no relevant docs found")
+        print("No relevant docs found")
         return jsonify({
-            "answer": "I can only answer medical questions based on the Gale Encyclopedia of Medicine.",
+            "answer": "<p>I could not find enough medical information on this topic.</p>",
             "sources": []
         })
 
@@ -226,7 +261,7 @@ def chat():
 
     if not source_docs:
         return jsonify({
-            "answer": "I could not find enough medical information on this topic.",
+            "answer": "<p>I could not find enough medical information on this topic.</p>",
             "sources": []
         })
 
@@ -237,7 +272,7 @@ def chat():
     REFUSAL_PHRASE = "I can only answer medical questions"
     if REFUSAL_PHRASE in response:
         return jsonify({
-            "answer": "I can only answer medical questions based on the Gale Encyclopedia of Medicine.",
+            "answer": "<p>I can only answer medical questions based on the Gale Encyclopedia of Medicine.</p>",
             "sources": []
         })
 
@@ -252,7 +287,7 @@ def chat():
         if source not in sources:
             sources.append(source)
 
-    # Step 6: Save with session_id and sources
+    # Step 6: Save to DB
     chat_data = ChatHistory(
         user_id=current_user.id,
         session_id=session_id,
