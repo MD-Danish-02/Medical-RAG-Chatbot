@@ -8,6 +8,40 @@
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@300;400;700&family=Source+Sans+3:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+    <!-- ── Formatting fix: bot message HTML tags render correctly ── -->
+    <style>
+        .message.bot p {
+            margin: 4px 0;
+            font-size: 14px;
+            line-height: 1.7;
+        }
+        
+        .message.bot ul,
+        .message.bot ol {
+            margin: 6px 0 6px 1.4rem;
+            padding: 0;
+        }
+        
+        .message.bot li {
+            margin-bottom: 5px;
+            font-size: 14px;
+            line-height: 1.7;
+        }
+        
+        .message.bot strong {
+            font-weight: 600;
+        }
+        /* Remove top margin on first child, bottom margin on last child */
+        
+        .message.bot>*:first-child {
+            margin-top: 0;
+        }
+        
+        .message.bot>*:last-child {
+            margin-bottom: 0;
+        }
+    </style>
 </head>
 
 <body>
@@ -123,19 +157,56 @@
             </div>
             <!-- ══ END HEADER ══ -->
 
+
             <div class="symptom-bar">
-                <span class="symptom-chip active" onclick="selectCategory(this, 'All medical topics')">🩺 All</span>
-                <span class="symptom-chip" onclick="selectCategory(this, 'What is Asthma and how is it treated?')">🫁 Asthma</span>
-                <span class="symptom-chip" onclick="selectCategory(this, 'What is Diabetes mellitus?')">🩸 Diabetes</span>
-                <span class="symptom-chip" onclick="selectCategory(this, 'What causes Hypertension?')">❤️ Hypertension</span>
-                <span class="symptom-chip" onclick="selectCategory(this, 'What is Alzheimer disease?')">🧠 Alzheimer</span>
-                <span class="symptom-chip" onclick="selectCategory(this, 'What is Cancer and its types?')">🎗️ Cancer</span>
-                <span class="symptom-chip" onclick="selectCategory(this, 'What is Tuberculosis?')">🫀 Tuberculosis</span>
-                <span class="symptom-chip" onclick="selectCategory(this, 'What is Arthritis?')">🦴 Arthritis</span>
-                <span class="symptom-chip" onclick="selectCategory(this, 'What is Anemia?')">💉 Anemia</span>
-                <span class="symptom-chip" onclick="selectCategory(this, 'What is Malaria?')">🦟 Malaria</span>
-                <span class="symptom-chip" onclick="selectCategory(this, 'What is AIDS?')">🔴 AIDS/HIV</span>
+
+                <span class="symptom-chip active" onclick="selectCategory(this, '')">
+                🩺 All
+                </span>
+
+                <span class="symptom-chip active" onclick="selectCategory(this, 'How does Alzheimer disease affect memory and daily life over time?')">
+                    🧠 Alzheimer
+                </span>
+
+                <span class="symptom-chip" onclick="selectCategory(this, 'Why does diabetes happen and what problems can it cause in the body?')">
+                    🩸 Diabetes
+                </span>
+
+                <span class="symptom-chip" onclick="selectCategory(this, 'What are the major causes and warning signs of high blood pressure?')">
+                    ❤️ Hypertension
+                </span>
+
+                <span class="symptom-chip" onclick="selectCategory(this, 'What is asthma and how is it treated?')">
+                    🫁 Asthma
+                </span>
+
+                <span class="symptom-chip" onclick="selectCategory(this, 'What is breast cancer and how is it treated?')">
+                    🎗️ Cancer
+                </span>
+
+                <span class="symptom-chip" onclick="selectCategory(this, 'Explain tuberculosis symptoms, transmission, and treatment.')">
+                    🫀 Tuberculosis
+                </span>
+
+                <span class="symptom-chip" onclick="selectCategory(this, 'Why do people develop arthritis and what are the common symptoms?')">
+                    🦴 Arthritis
+                </span>
+
+                <span class="symptom-chip" onclick="selectCategory(this, 'What happens in the body when someone has anemia?')">
+                    💉 Anemia
+                </span>
+
+                <span class="symptom-chip" onclick="selectCategory(this, 'How can malaria be prevented and treated after mosquito infection?')">
+                    🦟 Malaria
+                </span>
+
+                <span class="symptom-chip" onclick="selectCategory(this, 'How does HIV weaken the immune system and lead to AIDS?')">
+                    🔴 AIDS/HIV
+                </span>
+
             </div>
+
+
 
             <div class="chat-box" id="chat-box">
                 <div class="msg-row">
@@ -154,7 +225,6 @@
                 <span class="char-count" id="char-count">0 / 500</span>
             </div>
 
-            <!-- ══ UPDATED: textarea instead of input ══ -->
             <div class="chat-input">
                 <textarea id="text" placeholder="Ask a medical question…" maxlength="500" rows="1"></textarea>
                 <button class="send-btn" id="send">➤</button>

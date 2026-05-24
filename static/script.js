@@ -17,10 +17,7 @@ $(document).ready(function() {
             // ════════════════════════════════════════
 
             $('#text').on('input', function() {
-                // Char count update
                 $('#char-count').text($(this).val().length + ' / 500');
-
-                // Auto-grow: reset height first so shrinking works correctly
                 this.style.height = 'auto';
                 this.style.height = Math.min(this.scrollHeight, 160) + 'px';
             });
@@ -121,7 +118,6 @@ $(document).ready(function() {
 
                 appendUserMsg(raw);
 
-                // Reset textarea height after send
                 const ta = document.getElementById('text');
                 ta.value = '';
                 ta.style.height = 'auto';
@@ -157,7 +153,7 @@ $(document).ready(function() {
                         if (xhr.status === 401) {
                             openModal('login-modal');
                         } else {
-                            appendBotMsg('⚠️ Something went wrong. Please try again.', null, []);
+                            appendBotMsg('<p>⚠️ Something went wrong. Please try again.</p>', null, []);
                         }
                         scrollBottom();
                     });
@@ -165,13 +161,11 @@ $(document).ready(function() {
 
             $('#send').click(sendMessage);
 
-            // ══ Enter = send, Shift+Enter = new line ══
             $('#text').on('keydown', function(e) {
                 if (e.which === 13 && !e.shiftKey) {
-                    e.preventDefault(); // prevent default newline
+                    e.preventDefault();
                     sendMessage();
                 }
-                // Shift+Enter: browser handles newline naturally — no extra code needed
             });
 
 
@@ -188,163 +182,164 @@ $(document).ready(function() {
 </div>`);
             }
 
-            function appendBotMsg(text, msgId, sources) {
+            function appendBotMsg(htmlContent, msgId, sources) {
                 const id = msgId || ('msg' + Date.now());
-                const related = getRelated(text);
 
-                const relHtml = related.length ?
-                    `<div class="related-topics">${related.map(t =>
-        `<span class="related-chip" onclick="askTopic('${t}')">📖 ${t}</span>`
-    ).join('')}</div>` : '';
+                const srcHtml = (sources && sources.length) ?
+                    `<div class="source-citation">📚 <b>Source:</b> ${sources.map(s =>
+                `Gale Encyclopedia of Medicine — Page ${s.page}`
+            ).join(', ')}</div>` : '';
 
-const srcHtml = (sources && sources.length) ?
-    `<div class="source-citation">📚 <b>Source:</b> ${sources.map(s =>
-        `Gale Encyclopedia of Medicine — Page ${s.page}`
-    ).join(', ')}</div>` : '';
-
-$('#chat-box').append(`
+        // Build the row with a placeholder — then set innerHTML safely
+        const rowHtml = `
 <div class="msg-row" id="${id}">
     <div class="bot-avatar">📖</div>
     <div class="msg-content">
-        <div class="message bot">${escHtml(text)}</div>
+        <div class="message bot"></div>
         ${srcHtml}
-        ${relHtml}
         <div class="msg-actions">
             <button class="msg-action-btn" onclick="copyMsg('${id}')">📋 Copy</button>
             <button class="msg-action-btn" onclick="bookmarkMsg('${id}')">🔖 Save</button>
             <button class="msg-action-btn" onclick="speakMsg('${id}')">🔊 Listen</button>
         </div>
     </div>
-</div>`);
-}
+</div>`;
 
+        $('#chat-box').append(rowHtml);
 
-// ════════════════════════════════════════
-// ══ MESSAGE ACTIONS ══
-// ════════════════════════════════════════
-
-window.copyMsg = function(id) {
-const text = $('#' + id + ' .message.bot').text();
-try {
-    const ta = document.createElement('textarea');
-    ta.value = text;
-    ta.setAttribute('readonly', '');
-    ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none;';
-    document.body.appendChild(ta);
-    ta.focus();
-    ta.select();
-    ta.setSelectionRange(0, 99999);
-    const ok = document.execCommand('copy');
-    document.body.removeChild(ta);
-    showToast(ok ? '✅ Copied!' : '❌ Copy failed');
-} catch (e) {
-    showToast('❌ Copy not supported');
-}
-};
-
-window.bookmarkMsg = function(id) {
-if (!isLoggedIn) {
-    showToast('⚠️ Login to save bookmarks');
-    return;
-}
-const t = $('#' + id + ' .message.bot').text();
-$.ajax({
-    url: '/bookmarks',
-    type: 'POST',
-    contentType: 'application/json',
-    data: JSON.stringify({ text: t }),
-    success: function(data) {
-        bookmarks.unshift({ id: data.id, text: t });
-        updateBadge();
-        showToast('🔖 Saved to bookmarks!');
-    },
-    error: function() {
-        showToast('❌ Failed to save bookmark');
+        // ── KEY FIX: use innerHTML so <ul><li><p> tags render properly ──
+        document.querySelector('#' + id + ' .message.bot').innerHTML = htmlContent;
     }
-});
-};
-
-window.speakMsg = function(id) {
-const t = $('#' + id + ' .message.bot').text();
-if ('speechSynthesis' in window) {
-    window.speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(t);
-    u.rate = 0.92;
-    window.speechSynthesis.speak(u);
-    showToast('🔊 Reading aloud...');
-} else {
-    showToast('❌ TTS not supported');
-}
-};
 
 
-// ════════════════════════════════════════
-// ══ CATEGORY CHIPS ══
-// ════════════════════════════════════════
+    // ════════════════════════════════════════
+    // ══ MESSAGE ACTIONS ══
+    // ════════════════════════════════════════
 
-window.selectCategory = function(el, query) {
-document.querySelectorAll('.symptom-chip').forEach(c => c.classList.remove('active'));
-el.classList.add('active');
-const ta = document.getElementById('text');
-if (query === 'All medical topics') {
-    ta.value = '';
-    ta.style.height = 'auto';
-    $('#char-count').text('0 / 500');
-} else {
-    ta.value = query;
-    // Trigger auto-grow for pre-filled text
-    ta.style.height = 'auto';
-    ta.style.height = Math.min(ta.scrollHeight, 160) + 'px';
-    $('#char-count').text(query.length + ' / 500');
-}
-ta.focus();
-};
+    window.copyMsg = function(id) {
+        // Use innerText so we get plain readable text, not raw HTML tags
+        const text = document.querySelector('#' + id + ' .message.bot').innerText;
+        try {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.setAttribute('readonly', '');
+            ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none;';
+            document.body.appendChild(ta);
+            ta.focus();
+            ta.select();
+            ta.setSelectionRange(0, 99999);
+            const ok = document.execCommand('copy');
+            document.body.removeChild(ta);
+            showToast(ok ? '✅ Copied!' : '❌ Copy failed');
+        } catch (e) {
+            showToast('❌ Copy not supported');
+        }
+    };
 
-window.askTopic = function(topic) {
-const ta = document.getElementById('text');
-ta.value = topic;
-ta.style.height = 'auto';
-ta.style.height = Math.min(ta.scrollHeight, 160) + 'px';
-$('#char-count').text(topic.length + ' / 500');
-ta.focus();
-};
+    window.bookmarkMsg = function(id) {
+        if (!isLoggedIn) {
+            showToast('⚠️ Login to save bookmarks');
+            return;
+        }
+        // Store plain text in bookmark, not HTML
+        const t = document.querySelector('#' + id + ' .message.bot').innerText;
+        $.ajax({
+            url: '/bookmarks',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ text: t }),
+            success: function(data) {
+                bookmarks.unshift({ id: data.id, text: t });
+                updateBadge();
+                showToast('🔖 Saved to bookmarks!');
+            },
+            error: function() {
+                showToast('❌ Failed to save bookmark');
+            }
+        });
+    };
+
+    window.speakMsg = function(id) {
+        // Use innerText for TTS — plain readable text
+        const t = document.querySelector('#' + id + ' .message.bot').innerText;
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+            const u = new SpeechSynthesisUtterance(t);
+            u.rate = 0.92;
+            window.speechSynthesis.speak(u);
+            showToast('🔊 Reading aloud...');
+        } else {
+            showToast('❌ TTS not supported');
+        }
+    };
 
 
-// ════════════════════════════════════════
-// ══ RELATED TOPICS MAP ══
-// ════════════════════════════════════════
+    // ════════════════════════════════════════
+    // ══ CATEGORY CHIPS ══
+    // ════════════════════════════════════════
 
-function getRelated(text) {
-return [];
-}
+    window.selectCategory = function(el, query) {
+        document.querySelectorAll('.symptom-chip').forEach(c => c.classList.remove('active'));
+        el.classList.add('active');
+        const ta = document.getElementById('text');
+        if (query === 'All medical topics') {
+            ta.value = '';
+            ta.style.height = 'auto';
+            $('#char-count').text('0 / 500');
+        } else {
+            ta.value = query;
+            ta.style.height = 'auto';
+            ta.style.height = Math.min(ta.scrollHeight, 160) + 'px';
+            $('#char-count').text(query.length + ' / 500');
+        }
+        ta.focus();
+    };
+
+    window.askTopic = function(topic) {
+        const ta = document.getElementById('text');
+        ta.value = topic;
+        ta.style.height = 'auto';
+        ta.style.height = Math.min(ta.scrollHeight, 160) + 'px';
+        $('#char-count').text(topic.length + ' / 500');
+        ta.focus();
+    };
 
 
-// ════════════════════════════════════════
-// ══ CHAT HISTORY ══
-// ════════════════════════════════════════
+    // ════════════════════════════════════════
+    // ══ RELATED TOPICS MAP ══
+    // ════════════════════════════════════════
 
-function saveHistory(q, msgId) {
-const existing = chatHistory.find(e => e.session_id === currentSessionId);
-if (existing) {
-    existing.msg_count = (existing.msg_count || 1) + 1;
-} else {
-    chatHistory.unshift({
-        id: Date.now(),
-        session_id: currentSessionId,
-        q,
-        msgId,
-        msg_count: 1
-    });
-}
-renderHistory();
-}
+    function getRelated(text) {
+        return [];
+    }
 
-function renderHistory() {
-if (!chatHistory.length) {
-    $('#history-list').html('<div class="empty-state">No chats yet</div>');
-    return;
-}
-$('#history-list').html(chatHistory.map(e => `
+
+    // ════════════════════════════════════════
+    // ══ CHAT HISTORY ══
+    // ════════════════════════════════════════
+
+    function saveHistory(q, msgId) {
+        const existing = chatHistory.find(e => e.session_id === currentSessionId);
+        if (existing) {
+            existing.msg_count = (existing.msg_count || 1) + 1;
+        } else {
+            chatHistory.unshift({
+                id: Date.now(),
+                session_id: currentSessionId,
+                q,
+                msgId,
+                msg_count: 1
+            });
+        }
+        renderHistory();
+    }
+
+    function renderHistory() {
+        if (!chatHistory.length) {
+            $('#history-list').html('<div class="empty-state">No chats yet</div>');
+            return;
+        }
+        $('#history-list').html(chatHistory.map(e => `
 <div class="history-item ${e.session_id === currentSessionId ? 'active' : ''}"
      data-sessionid="${e.session_id}" data-id="${e.id}">
     <span>💬</span>
@@ -354,77 +349,77 @@ $('#history-list').html(chatHistory.map(e => `
     <button class="hi-del-btn" onclick="deleteHistory('${e.session_id}', event)" title="Delete">✕</button>
 </div>`).join(''));
 
-$('#history-list .history-item').on('click', function() {
-    const sessionId = $(this).data('sessionid');
-    loadSession(sessionId);
-});
-}
-
-function loadSession(sessionId) {
-if (sessionId === currentSessionId) {
-    showToast('📍 Already in this chat');
-    return;
-}
-currentSessionId = sessionId;
-$('#chat-box').html('');
-
-$.ajax({
-    url: '/session/' + sessionId,
-    type: 'GET',
-    success: function(data) {
-        data.forEach(chat => {
-            appendUserMsg(chat.question);
-            appendBotMsg(chat.answer, 'msg' + chat.id, chat.sources || []);
+        $('#history-list .history-item').on('click', function() {
+            const sessionId = $(this).data('sessionid');
+            loadSession(sessionId);
         });
-        scrollBottom();
-        renderHistory();
-        showToast('📂 Chat loaded');
-    },
-    error: function() {
-        showToast('❌ Failed to load chat');
     }
-});
-}
 
-function loadHistoryFromBackend() {
-$.ajax({
-    url: '/history',
-    type: 'GET',
-    success: function(data) {
-        chatHistory = data.map(s => ({
-            id: Date.now() + Math.random(),
-            session_id: s.session_id,
-            q: s.question,
-            msg_count: s.msg_count,
-            msgId: ''
-        }));
-        renderHistory();
-    },
-    error: function() {
-        console.log('Failed to load backend history');
+    function loadSession(sessionId) {
+        if (sessionId === currentSessionId) {
+            showToast('📍 Already in this chat');
+            return;
+        }
+        currentSessionId = sessionId;
+        $('#chat-box').html('');
+
+        $.ajax({
+            url: '/session/' + sessionId,
+            type: 'GET',
+            success: function(data) {
+                data.forEach(chat => {
+                    appendUserMsg(chat.question);
+                    appendBotMsg(chat.answer, 'msg' + chat.id, chat.sources || []);
+                });
+                scrollBottom();
+                renderHistory();
+                showToast('📂 Chat loaded');
+            },
+            error: function() {
+                showToast('❌ Failed to load chat');
+            }
+        });
     }
-});
-}
 
-window.deleteHistory = function(sessionId, event) {
-event.stopPropagation();
-$.ajax({
-    url: '/delete_chat/' + sessionId,
-    type: 'DELETE',
-    success: function() {
-        chatHistory = chatHistory.filter(e => e.session_id !== sessionId);
-        renderHistory();
-        showToast('🗑️ Chat deleted successfully');
-    },
-    error: function() {
-        showToast('❌ Failed to delete chat');
+    function loadHistoryFromBackend() {
+        $.ajax({
+            url: '/history',
+            type: 'GET',
+            success: function(data) {
+                chatHistory = data.map(s => ({
+                    id: Date.now() + Math.random(),
+                    session_id: s.session_id,
+                    q: s.question,
+                    msg_count: s.msg_count,
+                    msgId: ''
+                }));
+                renderHistory();
+            },
+            error: function() {
+                console.log('Failed to load backend history');
+            }
+        });
     }
-});
-};
 
-window.newChat = function() {
-currentSessionId = 'session_' + Date.now();
-$('#chat-box').html(`
+    window.deleteHistory = function(sessionId, event) {
+        event.stopPropagation();
+        $.ajax({
+            url: '/delete_chat/' + sessionId,
+            type: 'DELETE',
+            success: function() {
+                chatHistory = chatHistory.filter(e => e.session_id !== sessionId);
+                renderHistory();
+                showToast('🗑️ Chat deleted successfully');
+            },
+            error: function() {
+                showToast('❌ Failed to delete chat');
+            }
+        });
+    };
+
+    window.newChat = function() {
+        currentSessionId = 'session_' + Date.now();
+        $('#chat-box').html(`
 <div class="msg-row">
     <div class="bot-avatar">📖</div>
     <div class="msg-content">
@@ -433,57 +428,57 @@ $('#chat-box').html(`
         </div>
     </div>
 </div>`);
-renderHistory();
-showToast('✨ New chat started');
-};
+        renderHistory();
+        showToast('✨ New chat started');
+    };
 
 
-// ════════════════════════════════════════
-// ══ SIDEBAR TOGGLE ══
-// ════════════════════════════════════════
+    // ════════════════════════════════════════
+    // ══ SIDEBAR TOGGLE ══
+    // ════════════════════════════════════════
 
-window.toggleSidebar = function() {
-sidebarOpen = !sidebarOpen;
-const panel = $('#sidebar-panel');
-const overlay = $('#sidebar-overlay');
-if (sidebarOpen) {
-    panel.removeClass('closed');
-    overlay.addClass('active');
-} else {
-    panel.addClass('closed');
-    overlay.removeClass('active');
-}
-};
+    window.toggleSidebar = function() {
+        sidebarOpen = !sidebarOpen;
+        const panel = $('#sidebar-panel');
+        const overlay = $('#sidebar-overlay');
+        if (sidebarOpen) {
+            panel.removeClass('closed');
+            overlay.addClass('active');
+        } else {
+            panel.addClass('closed');
+            overlay.removeClass('active');
+        }
+    };
 
-window.openSidebar = function() {
-if (!sidebarOpen) toggleSidebar();
-};
+    window.openSidebar = function() {
+        if (!sidebarOpen) toggleSidebar();
+    };
 
 
-// ════════════════════════════════════════
-// ══ BOOKMARKS ══
-// ════════════════════════════════════════
+    // ════════════════════════════════════════
+    // ══ BOOKMARKS ══
+    // ════════════════════════════════════════
 
-function loadBookmarksFromBackend() {
-$.ajax({
-    url: '/bookmarks',
-    type: 'GET',
-    success: function(data) {
-        bookmarks = data;
-        updateBadge();
-    },
-    error: function() {
-        console.log('Failed to load bookmarks');
+    function loadBookmarksFromBackend() {
+        $.ajax({
+            url: '/bookmarks',
+            type: 'GET',
+            success: function(data) {
+                bookmarks = data;
+                updateBadge();
+            },
+            error: function() {
+                console.log('Failed to load bookmarks');
+            }
+        });
     }
-});
-}
 
-function renderBookmarks() {
-if (!bookmarks.length) {
-    $('#bookmark-list').html('<div class="empty-state">No bookmarks yet.<br>Click 🔖 on any answer to save it.</div>');
-    return;
-}
-$('#bookmark-list').html(bookmarks.map(b => `
+    function renderBookmarks() {
+        if (!bookmarks.length) {
+            $('#bookmark-list').html('<div class="empty-state">No bookmarks yet.<br>Click 🔖 on any answer to save it.</div>');
+            return;
+        }
+        $('#bookmark-list').html(bookmarks.map(b => `
 <div class="bookmark-item">
     <div class="bk-text">${escHtml(b.text.substring(0, 200))}${b.text.length > 200 ? '…' : ''}</div>
     <div class="bk-actions">
@@ -491,84 +486,92 @@ $('#bookmark-list').html(bookmarks.map(b => `
         <span class="bk-del" onclick="deleteBookmark(${b.id})">✕ Delete</span>
     </div>
 </div>`).join(''));
-}
-
-window.copyBookmark = function(id, el) {
-const bookmark = bookmarks.find(b => b.id === id);
-if (!bookmark) return;
-const ta = document.createElement('textarea');
-ta.value = bookmark.text;
-ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none;';
-document.body.appendChild(ta);
-ta.focus();
-ta.select();
-document.execCommand('copy');
-document.body.removeChild(ta);
-showToast('✅ Copied!');
-};
-
-window.deleteBookmark = function(id) {
-$.ajax({
-    url: '/bookmarks/' + id,
-    type: 'DELETE',
-    success: function() {
-        bookmarks = bookmarks.filter(b => b.id !== id);
-        updateBadge();
-        renderBookmarks();
-    },
-    error: function() {
-        showToast('❌ Failed to delete bookmark');
     }
-});
-};
 
-window.clearBookmarks = function() {
-$.ajax({
-    url: '/bookmarks/clear',
-    type: 'DELETE',
-    success: function() {
-        bookmarks = [];
-        updateBadge();
-        renderBookmarks();
-        showToast('🗑️ Bookmarks cleared');
-    },
-    error: function() {
-        showToast('❌ Failed to clear bookmarks');
+    window.copyBookmark = function(id, el) {
+        const bookmark = bookmarks.find(b => b.id === id);
+        if (!bookmark) return;
+        const ta = document.createElement('textarea');
+        ta.value = bookmark.text;
+        ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none;';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        showToast('✅ Copied!');
+    };
+
+    window.deleteBookmark = function(id) {
+        $.ajax({
+            url: '/bookmarks/' + id,
+            type: 'DELETE',
+            success: function() {
+                bookmarks = bookmarks.filter(b => b.id !== id);
+                updateBadge();
+                renderBookmarks();
+            },
+            error: function() {
+                showToast('❌ Failed to delete bookmark');
+            }
+        });
+    };
+
+    window.clearBookmarks = function() {
+        $.ajax({
+            url: '/bookmarks/clear',
+            type: 'DELETE',
+            success: function() {
+                bookmarks = [];
+                updateBadge();
+                renderBookmarks();
+                showToast('🗑️ Bookmarks cleared');
+            },
+            error: function() {
+                showToast('❌ Failed to clear bookmarks');
+            }
+        });
+    };
+
+    function updateBadge() {
+        const b = $('#bk-badge');
+        bookmarks.length > 0
+            ? b.text(bookmarks.length).css('display', 'flex')
+            : b.hide();
     }
-});
-};
-
-function updateBadge() {
-const b = $('#bk-badge');
-bookmarks.length > 0
-    ? b.text(bookmarks.length).css('display', 'flex')
-    : b.hide();
-}
 
 
-// ════════════════════════════════════════
-// ══ EXPORT PDF ══
-// ════════════════════════════════════════
+    // ════════════════════════════════════════
+    // ══ EXPORT PDF ══
+    // ════════════════════════════════════════
 
-window.exportPDF = function() {
-const messages = [];
-$('#chat-box .msg-row').each(function() {
-    const isUser = $(this).hasClass('user-row');
-    const text = $(this).find('.message').text().trim();
-    const source = $(this).find('.source-citation').text().trim();
-    if (text) messages.push({ role: isUser ? 'You' : 'Assistant', text, source });
-});
-if (!messages.length) { showToast('⚠️ No messages to export'); return; }
+    window.exportPDF = function() {
+        const messages = [];
+        $('#chat-box .msg-row').each(function() {
+            const isUser = $(this).hasClass('user-row');
+            // For user messages use text(), for bot use innerHTML (to keep formatting in export)
+            const msgEl = $(this).find('.message');
+            const text = isUser ? msgEl.text().trim() : msgEl.html().trim();
+            const source = $(this).find('.source-citation').text().trim();
+            if (text) messages.push({ role: isUser ? 'You' : 'Assistant', text, isUser, source });
+        });
 
-const rows = messages.map(m =>
-    `<div class="msg ${m.role === 'You' ? 'you' : 'bot'}">
+        if (!messages.length) { showToast('⚠️ No messages to export'); return; }
+
+        const rows = messages.map(m => {
+            // User messages: escape HTML. Bot messages: already HTML, render directly.
+            const displayText = m.isUser
+                ? escHtml(m.text)
+                : m.text;
+
+            return `<div class="msg ${m.role === 'You' ? 'you' : 'bot'}">
         <div class="role">${m.role}</div>
-        <div class="text">${m.text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
-        ${m.source ? `<div class="src">${m.source}</div>` : ''}
-    </div>`
-).join('');
+        <div class="text">${displayText}</div>
+        ${m.source ? `<div class="src">${escHtml(m.source)}</div>` : ''}
+    </div>`;
+        }).join('');
 
-const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+        const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
 <title>Medical Chat Export</title>
 <style>
     body{font-family:Georgia,serif;max-width:750px;margin:40px auto;color:#1b3a20}
@@ -579,6 +582,10 @@ const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
     .msg.bot{background:#f9f9f9;border-left:4px solid #aaa}
     .role{font-size:11px;font-weight:bold;text-transform:uppercase;color:#666;margin-bottom:4px}
     .text{font-size:14px;line-height:1.7}
+    .text p{margin:4px 0}
+    .text ul,.text ol{margin:6px 0 6px 1.4rem;padding:0}
+    .text li{margin-bottom:4px}
+    .text strong{font-weight:600}
     .src{font-size:11px;color:#888;margin-top:6px;padding-top:6px;border-top:1px dashed #ddd;font-style:italic}
     .disc{margin-top:40px;padding:14px;background:#111;color:#bbb;font-size:11px;
           font-style:italic;text-align:center;border-radius:6px}
@@ -589,108 +596,108 @@ ${rows}
 <div class="disc">⚕ Educational purposes only. Not medical advice. © 2026 Muhammad Danish Alam</div>
 </body></html>`;
 
-const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
-const url = URL.createObjectURL(blob);
-const a = document.createElement('a');
-a.href = url;
-a.download = 'medical-chat-export.html';
-document.body.appendChild(a);
-a.click();
-document.body.removeChild(a);
-URL.revokeObjectURL(url);
-showToast('📄 Exported! Open file → Print → Save as PDF');
-};
+        const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'medical-chat-export.html';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast('📄 Exported! Open file → Print → Save as PDF');
+    };
 
 
-// ════════════════════════════════════════
-// ══ THEME TOGGLE ══
-// ════════════════════════════════════════
+    // ════════════════════════════════════════
+    // ══ THEME TOGGLE ══
+    // ════════════════════════════════════════
 
-window.toggleTheme = function() {
-const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-document.documentElement.setAttribute('data-theme', isDark ? 'light' : 'dark');
-$('#theme-btn').text(isDark ? '🌙' : '☀️');
-showToast(isDark ? '☀️ Light mode' : '🌙 Dark mode');
-};
-
-
-// ════════════════════════════════════════
-// ══ MODALS ══
-// ════════════════════════════════════════
-
-window.openModal = function(id) {
-if (id === 'bookmarks-modal') renderBookmarks();
-$('#' + id).addClass('open');
-};
-
-window.closeModal = function(id) {
-$('#' + id).removeClass('open');
-};
-
-$('.modal-overlay').on('click', function(e) {
-if ($(e.target).hasClass('modal-overlay')) $(this).removeClass('open');
-});
+    window.toggleTheme = function() {
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        document.documentElement.setAttribute('data-theme', isDark ? 'light' : 'dark');
+        $('#theme-btn').text(isDark ? '🌙' : '☀️');
+        showToast(isDark ? '☀️ Light mode' : '🌙 Dark mode');
+    };
 
 
-// ════════════════════════════════════════
-// ══ REPORT ══
-// ════════════════════════════════════════
+    // ════════════════════════════════════════
+    // ══ MODALS ══
+    // ════════════════════════════════════════
 
-window.submitReport = function() {
-if (!$('#issue-desc').val().trim()) {
-    showToast('⚠️ Please describe the issue');
-    return;
-}
-$.ajax({
-    url: '/report',
-    type: 'POST',
-    contentType: 'application/json',
-    data: JSON.stringify({
-        type: $('#issue-type').val(),
-        description: $('#issue-desc').val(),
-        email: $('#issue-email').val()
-    }),
-    success: function() {
+    window.openModal = function(id) {
+        if (id === 'bookmarks-modal') renderBookmarks();
+        $('#' + id).addClass('open');
+    };
+
+    window.closeModal = function(id) {
+        $('#' + id).removeClass('open');
+    };
+
+    $('.modal-overlay').on('click', function(e) {
+        if ($(e.target).hasClass('modal-overlay')) $(this).removeClass('open');
+    });
+
+
+    // ════════════════════════════════════════
+    // ══ REPORT ══
+    // ════════════════════════════════════════
+
+    window.submitReport = function() {
+        if (!$('#issue-desc').val().trim()) {
+            showToast('⚠️ Please describe the issue');
+            return;
+        }
+        $.ajax({
+            url: '/report',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                type: $('#issue-type').val(),
+                description: $('#issue-desc').val(),
+                email: $('#issue-email').val()
+            }),
+            success: function() {
+                closeModal('report-modal');
+                $('#issue-desc').val('');
+                $('#issue-email').val('');
+                showToast('✅ Report submitted! Thank you.');
+            },
+            error: function() {
+                showToast('❌ Failed to submit report');
+            }
+        });
+    };
+
+    window.reportViaEmail = function() {
+        const type = $('#issue-type').val();
+        const desc = $('#issue-desc').val();
+        window.location.href = `mailto:mddanish.genai@gmail.com?subject=${encodeURIComponent('Issue: ' + type)}&body=${encodeURIComponent('Type: ' + type + '\n\nDescription: ' + desc)}`;
         closeModal('report-modal');
-        $('#issue-desc').val('');
-        $('#issue-email').val('');
-        showToast('✅ Report submitted! Thank you.');
-    },
-    error: function() {
-        showToast('❌ Failed to submit report');
+    };
+
+
+    // ════════════════════════════════════════
+    // ══ HELPERS ══
+    // ════════════════════════════════════════
+
+    function scrollBottom() {
+        const box = document.getElementById('chat-box');
+        setTimeout(() => { box.scrollTop = box.scrollHeight; }, 60);
     }
-});
-};
 
-window.reportViaEmail = function() {
-const type = $('#issue-type').val();
-const desc = $('#issue-desc').val();
-window.location.href = `mailto:mddanish.genai@gmail.com?subject=${encodeURIComponent('Issue: ' + type)}&body=${encodeURIComponent('Type: ' + type + '\n\nDescription: ' + desc)}`;
-closeModal('report-modal');
-};
+    function escHtml(s) {
+        return String(s)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
 
-
-// ════════════════════════════════════════
-// ══ HELPERS ══
-// ════════════════════════════════════════
-
-function scrollBottom() {
-const box = document.getElementById('chat-box');
-setTimeout(() => { box.scrollTop = box.scrollHeight; }, 60);
-}
-
-function escHtml(s) {
-return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
-function showToast(msg) {
-const t = $('#toast');
-t.text(msg).addClass('show');
-setTimeout(() => t.removeClass('show'), 2600);
-}
+    function showToast(msg) {
+        const t = $('#toast');
+        t.text(msg).addClass('show');
+        setTimeout(() => t.removeClass('show'), 2600);
+    }
 
 });
