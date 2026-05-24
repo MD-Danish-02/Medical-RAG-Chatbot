@@ -125,7 +125,7 @@ Answer:"""
     return "YES" in response_text
 
 
-# ── Clean Response: returns formatted HTML ──────────────────────────────────
+# Clean Response: returns formatted HTML
 def clean_response(text):
     # Remove **bold** markdown
     text = re.sub(r'\*\*(.*?)\*\*', r'\1', text)
@@ -184,7 +184,7 @@ def clean_response(text):
         html_parts.append(f'</{list_type}>')
 
     return '\n'.join(html_parts)
-# ────────────────────────────────────────────────────────────────────────────
+
 
 
 # Home Route
