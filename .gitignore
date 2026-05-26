@@ -51,4 +51,4 @@ assets/
 downloads/
 
 # Node
-node_modules/
+node_modules/pdfs/ 
