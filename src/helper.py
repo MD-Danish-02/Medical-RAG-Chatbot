@@ -8,13 +8,16 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
 
 import re
+import os
 
 
 # Clean PDF Text
 def clean_text(text):
+
     text = re.sub(r'\s+', ' ', text)
     text = re.sub(r'([.,])\1+', r'\1', text)
     text = re.sub(r'\b(\w+)( \1\b)+', r'\1', text)
+
     return text.strip()
 
 
@@ -29,9 +32,16 @@ def load_pdf(data):
 
     documents = loader.load()
 
-    # Clean extracted text
+    # Clean extracted text + metadata
     for doc in documents:
+
         doc.page_content = clean_text(doc.page_content)
+
+        source = doc.metadata.get("source", "")
+
+        doc.metadata["source"] = os.path.basename(source)
+
+        doc.metadata["page"] = doc.metadata.get("page", 0)
 
     return documents
 
@@ -40,8 +50,18 @@ def load_pdf(data):
 def text_split(extracted_data):
 
     text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=700,
-        chunk_overlap=80
+
+        chunk_size=500,
+
+        chunk_overlap=120,
+
+        separators=[
+            "\n\n",
+            "\n",
+            ". ",
+            ", ",
+            " "
+        ]
     )
 
     text_chunks = text_splitter.split_documents(extracted_data)

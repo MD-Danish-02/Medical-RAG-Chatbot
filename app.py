@@ -91,8 +91,8 @@ qa = RetrievalQA.from_chain_type(
     retriever=docsearch.as_retriever(
         search_type="mmr",
         search_kwargs={
-            "k": 3,
-            "fetch_k": 9,
+            "k": 5,
+            "fetch_k": 20,
             "lambda_mult": 0.5
         }
     ),
@@ -102,27 +102,28 @@ qa = RetrievalQA.from_chain_type(
 
 
 # Similarity Score Threshold Check
-def get_relevant_docs_with_threshold(query, threshold=0.0):
+#def get_relevant_docs_with_threshold(query, threshold=0.0):
+def get_relevant_docs_with_threshold(query, threshold=0.35):
     results = docsearch.similarity_search_with_relevance_scores(query, k=3)
     filtered = [doc for doc, score in results if score >= threshold]
     return filtered
 
 
 # Medical Query Check via Groq
-def is_medical_query_llm(query):
-    check_prompt = f"""You are a medical query classifier.
+#def is_medical_query_llm(query):
+#    check_prompt = f"""You are a medical query classifier.
 
-Is the following question related to any medical topic including diseases, infections, symptoms, treatments, drugs, surgery, anatomy, or public health?
+#Is the following question related to any medical topic including diseases, infections, symptoms, treatments, drugs, surgery, anatomy, or public health?
 
-Answer ONLY with YES or NO.
+#Answer ONLY with YES or NO.
 
-Question: {query}
+#Question: {query}
 
-Answer:"""
+#Answer:"""
 
-    result = llm.invoke(check_prompt)
-    response_text = result.content.strip().upper()
-    return "YES" in response_text
+#    result = llm.invoke(check_prompt)
+ #   response_text = result.content.strip().upper()
+  #  return "YES" in response_text
 
 
 # Clean Response: returns formatted HTML
@@ -238,15 +239,15 @@ def chat():
     print("User Input:", msg)
 
     # Step 1: Medical query check via Groq
-    if not is_medical_query_llm(msg):
-        print("Medical check failed — non-medical query")
-        return jsonify({
-            "answer": "<p>I can only answer medical questions based on the Gale Encyclopedia of Medicine.</p>",
-            "sources": []
-        })
+    #if not is_medical_query_llm(msg):
+      #  print("Medical check failed — non-medical query")
+      #  return jsonify({
+       #     "answer": "<p>I can only answer medical questions based on the Gale Encyclopedia of Medicine.</p>",
+        #    "sources": []
+        #})
 
     # Step 2: Retrieve relevant docs
-    relevant_docs = get_relevant_docs_with_threshold(msg, threshold=0.0)
+    relevant_docs = get_relevant_docs_with_threshold(msg, threshold=0.5)
     if not relevant_docs:
         print("No relevant docs found")
         return jsonify({
