@@ -47,7 +47,7 @@ Thumbs.db
 
 # Optional project folders
 research/
-assets/
+#assets/
 downloads/
 
 # Node

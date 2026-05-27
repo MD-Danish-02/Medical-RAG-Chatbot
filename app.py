@@ -102,28 +102,10 @@ qa = RetrievalQA.from_chain_type(
 
 
 # Similarity Score Threshold Check
-#def get_relevant_docs_with_threshold(query, threshold=0.0):
 def get_relevant_docs_with_threshold(query, threshold=0.35):
     results = docsearch.similarity_search_with_relevance_scores(query, k=3)
     filtered = [doc for doc, score in results if score >= threshold]
     return filtered
-
-
-# Medical Query Check via Groq
-#def is_medical_query_llm(query):
-#    check_prompt = f"""You are a medical query classifier.
-
-#Is the following question related to any medical topic including diseases, infections, symptoms, treatments, drugs, surgery, anatomy, or public health?
-
-#Answer ONLY with YES or NO.
-
-#Question: {query}
-
-#Answer:"""
-
-#    result = llm.invoke(check_prompt)
- #   response_text = result.content.strip().upper()
-  #  return "YES" in response_text
 
 
 # Clean Response: returns formatted HTML
@@ -146,14 +128,14 @@ def clean_response(text):
         if not line:
             continue
 
-        # Bullet line: starts with * or • or - (single dash)
-        if re.match(r'^[-\*•]\s+', line):
+        # Bullet line: starts with * or • or - or +
+        if re.match(r'^[-\*•\+]\s+', line):
             if list_type != 'ul':
                 if list_type == 'ol':
                     html_parts.append('</ol>')
                 html_parts.append('<ul>')
                 list_type = 'ul'
-            content = re.sub(r'^[-\*•]\s+', '', line)
+            content = re.sub(r'^[-\*•\+]\s+', '', line)
             html_parts.append(f'<li>{content}</li>')
 
         # Numbered list: starts with 1. 2. etc.
@@ -185,7 +167,6 @@ def clean_response(text):
         html_parts.append(f'</{list_type}>')
 
     return '\n'.join(html_parts)
-
 
 
 # Home Route
@@ -238,15 +219,7 @@ def chat():
     session_id = request.form.get("session_id", str(uuid.uuid4()))
     print("User Input:", msg)
 
-    # Step 1: Medical query check via Groq
-    #if not is_medical_query_llm(msg):
-      #  print("Medical check failed — non-medical query")
-      #  return jsonify({
-       #     "answer": "<p>I can only answer medical questions based on the Gale Encyclopedia of Medicine.</p>",
-        #    "sources": []
-        #})
-
-    # Step 2: Retrieve relevant docs
+    # Step 1: Retrieve relevant docs with threshold
     relevant_docs = get_relevant_docs_with_threshold(msg, threshold=0.5)
     if not relevant_docs:
         print("No relevant docs found")
@@ -255,7 +228,7 @@ def chat():
             "sources": []
         })
 
-    # Step 3: LLM call
+    # Step 2: LLM call
     result = qa.invoke({"query": msg})
     response = result["result"]
     source_docs = result["source_documents"]
@@ -269,7 +242,7 @@ def chat():
     response = clean_response(response)
     print("Response:", response)
 
-    # Step 4: Refusal check
+    # Step 3: Refusal check
     REFUSAL_PHRASE = "I can only answer medical questions"
     if REFUSAL_PHRASE in response:
         return jsonify({
@@ -277,7 +250,7 @@ def chat():
             "sources": []
         })
 
-    # Step 5: Extract sources
+    # Step 4: Extract sources
     sources = []
     for doc in source_docs:
         meta = doc.metadata
@@ -288,7 +261,7 @@ def chat():
         if source not in sources:
             sources.append(source)
 
-    # Step 6: Save to DB
+    # Step 5: Save to DB
     chat_data = ChatHistory(
         user_id=current_user.id,
         session_id=session_id,
