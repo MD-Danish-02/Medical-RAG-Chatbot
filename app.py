@@ -78,7 +78,7 @@ chain_type_kwargs = {"prompt": PROMPT}
 
 # Load Groq Model
 llm = ChatGroq(
-    model="llama-3.1-8b-instant",
+    model="openai/gpt-oss-20b",
     temperature=0.0,
     max_tokens=500,
     groq_api_key=os.environ.get("GROQ_API_KEY")
