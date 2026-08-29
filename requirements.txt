@@ -15,6 +15,7 @@ pinecone
 sentence-transformers
 #llama-cpp-python
 langchain-groq
+gunicorn
 
 pymupdf
 pypdf
