@@ -1,0 +1,54 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Environment files
+.env
+.venv
+venv/
+env/
+
+# Git
+.git
+
+# Local LLM models
+model/
+*.gguf
+*.bin
+
+# Build / cache
+build/
+dist/
+.cache/
+.pytest_cache/
+.mypy_cache/
+
+# Egg info
+*.egg-info/
+
+# Docker
+.dockerignore
+
+# VS Code
+.vscode/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Optional project folders
+research/
+#assets/
+downloads/
+
+# Node
+node_modules/
+pdfs/

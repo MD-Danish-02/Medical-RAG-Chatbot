@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medical Encyclopedia RAG Chatbot</title>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@300;400;700&family=Source+Sans+3:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+    <!-- ── Formatting fix: bot message HTML tags render correctly ── -->
+    <style>
+        .message.bot p {
+            margin: 4px 0;
+            font-size: 14px;
+            line-height: 1.7;
+        }
+        
+        .message.bot ul,
+        .message.bot ol {
+            margin: 6px 0 6px 1.4rem;
+            padding: 0;
+        }
+        
+        .message.bot li {
+            margin-bottom: 5px;
+            font-size: 14px;
+            line-height: 1.7;
+        }
+        
+        .message.bot strong {
+            font-weight: 600;
+        }
+        /* Remove top margin on first child, bottom margin on last child */
+        
+        .message.bot>*:first-child {
+            margin-top: 0;
+        }
+        
+        .message.bot>*:last-child {
+            margin-bottom: 0;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="app-wrapper">
+
+        <!-- ══ SIDEBAR ══ -->
+        <div class="sidebar-panel closed" id="sidebar-panel">
+
+            <div class="sidebar-top">
+                <div class="sidebar-logo">
+                    <span>🩺</span>
+                    <span class="sidebar-logo-text">Medical Encyclopedia</span>
+                </div>
+                <button class="sidebar-close-btn" onclick="toggleSidebar()" title="Close sidebar">✕</button>
+            </div>
+
+            <button class="new-chat-btn" onclick="newChat()">＋ New Chat</button>
+            <div class="history-section-label">Recent</div>
+            <div class="chat-history-list" id="history-list">
+                <div class="empty-state">No chats yet</div>
+            </div>
+
+            <!-- ══ PROFILE — bottom of sidebar ══ -->
+            <div class="sidebar-profile" id="sidebar-profile-wrapper">
+                <button class="sidebar-profile-btn" id="sidebar-profile-btn" onclick="toggleProfileMenu(event)">
+                    <div class="sp-avatar-wrap">
+                        <img src="" alt="" id="profile-avatar-img" class="sp-avatar" style="display:none;">
+                        <span id="profile-avatar-fallback">👤</span>
+                    </div>
+                    <div class="sp-info">
+                        <div class="sp-name" id="pd-name">Loading...</div>
+                        <div class="sp-email" id="pd-email">...</div>
+                    </div>
+                    <span class="sp-chevron">⋯</span>
+                </button>
+
+                <!-- Dropdown opens UPWARD -->
+                <div class="profile-dropdown" id="profile-dropdown">
+                    <div class="profile-dropdown-header">
+                        <div class="pd-avatar-wrap">
+                            <img src="" alt="" id="pd-avatar" class="pd-avatar" style="display:none;">
+                            <div class="pd-avatar-fallback" id="pd-avatar-fallback">👤</div>
+                        </div>
+                        <div class="pd-info">
+                            <div class="pd-name-drop" id="pd-name-drop">Loading...</div>
+                            <div class="pd-email-drop" id="pd-email-drop">...</div>
+                        </div>
+                    </div>
+
+                    <div class="pd-divider"></div>
+
+                    <div class="pd-stat-row">
+                        <div class="pd-stat">
+                            <span class="pd-stat-icon">📜</span>
+                            <span class="pd-stat-label">Chat History</span>
+                            <span class="pd-stat-val" id="pd-chat-count">—</span>
+                        </div>
+                        <div class="pd-stat">
+                            <span class="pd-stat-icon">📅</span>
+                            <span class="pd-stat-label">Joined</span>
+                            <span class="pd-stat-val" id="pd-joined">—</span>
+                        </div>
+                    </div>
+
+                    <div class="pd-divider"></div>
+
+                    <button class="pd-action-btn pd-logout" onclick="doLogout()">
+                        <span>🚪</span> Logout
+                    </button>
+                    <button class="pd-action-btn pd-delete" onclick="openDeleteConfirm()">
+                        <span>🗑️</span> Delete Account
+                    </button>
+                </div>
+            </div>
+            <!-- ══ END PROFILE ══ -->
+
+        </div>
+        <!-- ══ END SIDEBAR ══ -->
+
+        <!-- ══ MAIN CHAT ══ -->
+        <div class="chat-container">
+
+            <!-- ══ HEADER ══ -->
+            <div class="chat-header">
+                <div class="header-left">
+                    <button class="hdr-btn hamburger-btn" title="Toggle Sidebar" onclick="toggleSidebar()">
+                        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="1" y="1" width="16" height="16" rx="3" stroke="currentColor" stroke-width="1.5"/>
+                            <line x1="6" y1="1.5" x2="6" y2="16.5" stroke="currentColor" stroke-width="1.5"/>
+                            <line x1="9" y1="6" x2="14" y2="6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+                            <line x1="9" y1="9" x2="14" y2="9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+                            <line x1="9" y1="12" x2="14" y2="12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+                        </svg>
+                    </button>
+                    <div class="header-icon">🩺</div>
+                    <div class="header-title">
+                        <h1>
+                            <span class="title-desktop">Medical Encyclopedia</span>
+                            <span class="title-mobile">Med Encyclopedia</span>
+                        </h1>
+                        <p>Powered by RAG · Gale Encyclopedia of Medicine</p>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <button class="hdr-btn" title="Export Chat" onclick="exportPDF()" style="font-size:15px;">📄</button>
+                    <button class="hdr-btn" title="Bookmarks" onclick="openModal('bookmarks-modal')">
+                        🔖<span class="bk-badge" id="bk-badge">0</span>
+                    </button>
+                    <button class="hdr-btn" id="theme-btn" title="Toggle Dark Mode" onclick="toggleTheme()">🌙</button>
+                    <a href="/login" id="login-header-btn" style="display:none;">Log in</a>
+                </div>
+            </div>
+            <!-- ══ END HEADER ══ -->
+
+
+            <div class="symptom-bar">
+
+                <span class="symptom-chip active" onclick="selectCategory(this, '')">
+                🩺 All
+                </span>
+
+                <span class="symptom-chip active" onclick="selectCategory(this, 'How does Alzheimer disease affect memory and daily life over time?')">
+                    🧠 Alzheimer
+                </span>
+
+                <span class="symptom-chip" onclick="selectCategory(this, 'Why does diabetes happen and what problems can it cause in the body?')">
+                    🩸 Diabetes
+                </span>
+
+
+                <span class="symptom-chip" onclick="selectCategory(this, 'What is asthma and how is it treated?')">
+                    🫁 Asthma
+                </span>
+
+                <span class="symptom-chip" onclick="selectCategory(this, 'What is breast cancer and how is it treated?')">
+                    🎗️ Cancer
+                </span>
+
+                <span class="symptom-chip" onclick="selectCategory(this, 'Why do people develop arthritis and what are the common symptoms?')">
+                    🦴 Arthritis
+                </span>
+
+                <span class="symptom-chip" onclick="selectCategory(this, 'What happens in the body when someone has anemia?')">
+                    💉 Anemia
+                </span>
+
+                <span class="symptom-chip" onclick="selectCategory(this, 'How can malaria be prevented and treated after mosquito infection?')">
+                    🦟 Malaria
+                </span>
+
+                <span class="symptom-chip" onclick="selectCategory(this, 'How does HIV weaken the immune system and lead to AIDS?')">
+                    🔴 AIDS/HIV
+                </span>
+
+            </div>
+
+
+
+            <div class="chat-box" id="chat-box">
+                <div class="msg-row">
+                    <div class="bot-avatar">📖</div>
+                    <div class="msg-content">
+                        <div class="message bot">
+                            Welcome! 👋 I'm your <strong>Medical Encyclopedia Assistant</strong> — trained on the Gale Encyclopedia of Medicine.<br><br> Ask me about diseases, symptoms, treatments, anatomy, or any medical topic. Use the quick chips above
+                            to explore!
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="report-bar">
+                <button class="report-btn" onclick="openModal('report-modal')">⚑ Report an Issue</button>
+                <span class="char-count" id="char-count">0 / 500</span>
+            </div>
+
+            <div class="chat-input">
+                <textarea id="text" placeholder="Ask a medical question…" maxlength="500" rows="1"></textarea>
+                <button class="send-btn" id="send">➤</button>
+            </div>
+
+            <div class="footer">
+                <p class="disclaimer-heading">⚕ Medical Disclaimer</p>
+                <p class="disclaimer-text">
+                    This chatbot is powered by The Gale Encyclopedia of Medicine and provides general health information for educational purposes only. It does not constitute professional medical advice, diagnosis, or treatment. Always consult a qualified physician or healthcare
+                    provider. In a medical emergency, call 112 immediately.
+                </p>
+                <p class="copyright">© 2026 Muhammad Danish Alam &nbsp;·&nbsp; All rights reserved</p>
+            </div>
+
+        </div>
+        <!-- ══ END MAIN CHAT ══ -->
+
+    </div>
+    <!-- ══ END APP WRAPPER ══ -->
+
+
+    <!-- ══ LOGIN MODAL ══ -->
+    <div class="modal-overlay" id="login-modal">
+        <div class="modal" style="max-width:380px; text-align:center;">
+            <div class="modal-header" style="justify-content:flex-end; margin-bottom:8px;">
+                <button class="modal-close" onclick="closeModal('login-modal')">✕</button>
+            </div>
+            <div style="font-size:32px; margin-bottom:12px;">🩺</div>
+            <h2 style="font-family:'Merriweather',serif; font-size:18px; color:var(--text); margin-bottom:8px;">
+                Sign in to Continue
+            </h2>
+            <p style="font-size:13px; color:var(--text-muted); margin-bottom:24px; line-height:1.6;">
+                Sign in to send messages and save your chat history.
+            </p>
+            <a href="/login" style="
+                display:flex; align-items:center; justify-content:center; gap:10px;
+                padding:12px 16px; background:#ffffff; color:#333;
+                border:1.5px solid var(--border); border-radius:10px;
+                font-size:14px; font-weight:600; text-decoration:none;
+                transition:all 0.2s; margin-bottom:10px;">
+                <img src="https://www.google.com/favicon.ico" width="18" height="18" alt="G"> Continue with Google
+            </a>
+            <p style="font-size:11px; color:var(--text-muted); margin-top:12px;">
+                🔒 Your data is safe and private.
+            </p>
+        </div>
+    </div>
+
+    <!-- ══ DELETE ACCOUNT MODAL ══ -->
+    <div class="modal-overlay" id="delete-account-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>🗑️ Delete Account</h2>
+                <button class="modal-close" onclick="closeModal('delete-account-modal')">✕</button>
+            </div>
+            <p style="font-size:13.5px; color:var(--text); line-height:1.7; margin-top:6px;">
+                Are you sure you want to <strong>permanently delete</strong> your account?<br> This will erase <strong>all your chat history</strong> and cannot be undone.
+            </p>
+            <div class="modal-actions" style="margin-top:20px;">
+                <button class="modal-btn secondary" onclick="closeModal('delete-account-modal')">Cancel</button>
+                <button class="modal-btn primary" style="background:#e53935;" onclick="confirmDeleteAccount()">🗑️ Delete Permanently</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ REPORT MODAL ══ -->
+    <div class="modal-overlay" id="report-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>⚑ Report an Issue</h2>
+                <button class="modal-close" onclick="closeModal('report-modal')">✕</button>
+            </div>
+            <label>Issue Type</label>
+            <select id="issue-type">
+                <option>Wrong / Inaccurate Answer</option>
+                <option>Incomplete Information</option>
+                <option>Bot Not Responding</option>
+                <option>Offensive Content</option>
+                <option>Other</option>
+            </select>
+            <label>Describe the Issue</label>
+            <textarea id="issue-desc" placeholder="What went wrong?"></textarea>
+            <label>Your Email (optional)</label>
+            <input type="text" id="issue-email" placeholder="you@example.com">
+            <div class="modal-actions">
+                <button class="modal-btn secondary" onclick="closeModal('report-modal')">Cancel</button>
+                <button class="modal-btn primary" onclick="submitReport()">Submit</button>
+                <button class="modal-btn primary" style="background:#00897b" onclick="reportViaEmail()">📧 Email</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ BOOKMARKS MODAL ══ -->
+    <div class="modal-overlay" id="bookmarks-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>🔖 Saved Answers</h2>
+                <button class="modal-close" onclick="closeModal('bookmarks-modal')">✕</button>
+            </div>
+            <div class="bookmark-list" id="bookmark-list">
+                <div class="empty-state">No bookmarks yet.<br>Click 🔖 on any answer to save it.</div>
+            </div>
+            <div class="modal-actions">
+                <button class="modal-btn secondary" onclick="clearBookmarks()">Clear All</button>
+                <button class="modal-btn primary" onclick="closeModal('bookmarks-modal')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <!-- Sidebar overlay for mobile -->
+    <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+
+</html>
