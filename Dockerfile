@@ -6,6 +6,9 @@ COPY . /app
 
 RUN pip install --no-cache-dir --upgrade pip
 
+RUN pip install --no-cache-dir torch==2.9.0+cpu \
+    --extra-index-url https://download.pytorch.org/whl/cpu
+
 RUN pip install --no-cache-dir -r requirements.txt
 
 EXPOSE 8080
