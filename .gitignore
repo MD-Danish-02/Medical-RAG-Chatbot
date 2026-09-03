@@ -6,12 +6,12 @@ __pycache__/
 
 # Environment files
 .env
-.venv
+.venv/
 venv/
 env/
 
 # Git
-.git
+.git/
 
 # Local LLM models
 model/
@@ -44,11 +44,11 @@ dist/
 .DS_Store
 Thumbs.db
 
-# Optional project folders
+# Project data / large files
+assets/
+pdfs/
 research/
-#assets/
 downloads/
 
 # Node
 node_modules/
-pdfs/
